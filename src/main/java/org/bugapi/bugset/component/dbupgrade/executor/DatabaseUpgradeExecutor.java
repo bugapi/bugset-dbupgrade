@@ -19,8 +19,11 @@ import org.bugapi.bugset.base.util.collection.CollectionUtil;
 import org.bugapi.bugset.base.util.sql.DataBaseUtil;
 import org.bugapi.bugset.base.util.sql.MetaDataUtil;
 import org.bugapi.bugset.base.util.string.StringUtil;
+import org.bugapi.bugset.component.dbupgrade.database.DatabaseOperation;
+import org.bugapi.bugset.component.dbupgrade.database.MySqlOperationDelegate;
+import org.bugapi.bugset.component.dbupgrade.domain.DatabaseUpgradeVersion;
+import org.bugapi.bugset.component.dbupgrade.domain.DatabaseVersion;
 import org.bugapi.bugset.component.dbupgrade.domain.UpgradeConfig;
-import org.bugapi.bugset.component.dbupgrade.domain.VersionInfo;
 import org.bugapi.bugset.component.dbupgrade.parser.UpgradeConfigParser;
 
 /**
@@ -47,6 +50,11 @@ public class DatabaseUpgradeExecutor {
 	 */
 	private UpgradeConfigParser parser;
 
+	/**
+	 * 数据库操作
+	 */
+	private DatabaseOperation databaseOperation;
+
 	public DatabaseUpgradeExecutor(EnvironmentEnum environment, DataSource dataSource, UpgradeConfigParser upgradeConfigParser) {
 		this.environment = environment;
 		this.dataSource = dataSource;
@@ -57,28 +65,20 @@ public class DatabaseUpgradeExecutor {
 	 * 数据库升级的入口
 	 */
 	public void upgrade() {
-		// 获取升级配置信息；
-		List<UpgradeConfig> upgradeConfigInfoList = parser.parseUpgradeConfigs();
-		if (CollectionUtil.isEmpty(upgradeConfigInfoList)) {
+		// 获取升级配置信息
+		List<UpgradeConfig> upgradeConfigs = parser.parseUpgradeConfigs();
+		if (CollectionUtil.isEmpty(upgradeConfigs)) {
 			log.error("没有获取到任何需要升级的配置信息");
 			return;
 		}
+		upgradeConfigs.sort();
 
-		if (!MetaDataUtil.existTable(dataSource, UPGRADE_TABLE_NAME)) {
-			// 如果升级表不存在就创建表
-			DataBaseUtil.update(dataSource, "CREATE TABLE VERSIONINFO (" +
-					"domain VARCHAR(100) NOT NULL," +
-					"comments VARCHAR(1000)," +
-					"DDLVersion VARCHAR(100) ," +
-					"DMLVersion VARCHAR(100) ," +
-					"DDLUpgradedate DATE NOT NULL," +
-					"DMLUpgradedate DATE NOT NULL," +
-					"DDLPUBLISHVERSION VARCHAR(100) ," +
-					"DMLPUBLISHVERSION VARCHAR(100) ," +
-					"PRIMARY KEY (DOMAIN))");
-		}
+		//TODO 根据数据库类型使用不同的数据库操作代理
+		databaseOperation = new MySqlOperationDelegate(dataSource);
+		initDatabaseVersionTable(upgradeConfigs);
+
 		// 遍历升级配置信息，完善VersionInfo中的信息，为后边dml和ddl分开升级做准备
-		List<VersionInfo> versionInfoList = initDatabaseVersion(upgradeConfigInfoList);
+		List<DatabaseVersion> versionInfoList = initDatabaseVersion(upgradeConfigs);
 
 		// 进行ddl数据升级
 		ddlScriptupgrade(versionInfoList);
@@ -87,14 +87,29 @@ public class DatabaseUpgradeExecutor {
 	}
 
 	/**
+	 * 判断数据库升级配置表是否存在
+	 * 不存在则初始化
+	 */
+	private void initDatabaseVersionTable(List<UpgradeConfig> upgradeConfigs) {
+		if (!MetaDataUtil.existTable(dataSource, UPGRADE_TABLE_NAME)) {
+			// 如果升级表不存在就创建表
+			this.databaseOperation.initDatabaseVersionTable();
+			upgradeConfigs.stream().map(config -> {
+				DatabaseVersion databaseVersion = new DatabaseVersion();
+				databaseVersion.setBusiness(config.getBusiness());
+			})
+		}
+	}
+
+	/**
 	 * 填充升级版本管理的字段信息，并返回一个版本管理的集合
 	 * @param upgradeConfigInfoList 升级配置集合
 	 * @return List<VersionInfo> 版本管理的集合
 	 */
-	private List<VersionInfo> initDatabaseVersion(List<UpgradeConfig> upgradeConfigInfoList){
+	private List<DatabaseUpgradeVersion> initDatabaseVersion(List<UpgradeConfig> upgradeConfigInfoList){
 		//根据模块名获取数据库版本信息
-		VersionInfo versionInfo;
-		List<VersionInfo> versionInfoList = new ArrayList<>();
+		DatabaseUpgradeVersion upgradeVersion;
+		List<DatabaseUpgradeVersion> versionInfoList = new ArrayList<>();
 		for (UpgradeConfig upgradeConfigInfo : upgradeConfigInfoList) {
 			//根据模块名获取数据库版本信息
 			versionInfo = getVersionInfo(this.dataSource, upgradeConfigInfo);
@@ -130,12 +145,12 @@ public class DatabaseUpgradeExecutor {
 	 * @param upgradeConfigInfo 升级配置信息
 	 * @return VersionInfo 版本信息
 	 */
-	private VersionInfo getVersionInfo(DataSource dataSource, UpgradeConfig upgradeConfigInfo) {
+	private DatabaseVersion getVersionInfo(DataSource dataSource, UpgradeConfig upgradeConfigInfo) {
 		// 从数据库获取数据库升级的版本信息
-		VersionInfo versionInfo = getVersionInfoFromDataBase(dataSource, upgradeConfigInfo);
+		DatabaseVersion versionInfo = getVersionInfoFromDataBase(dataSource, upgradeConfigInfo);
 		// 数据库获取不到信息，就创建一个基本信息，并保存到数据库中。
 		if(versionInfo == null){
-			versionInfo = new VersionInfo();
+			versionInfo = new DatabaseVersion();
 			versionInfo.setDomain(upgradeConfigInfo.getDomain());
 			versionInfo.setDdlVersion("0");
 			versionInfo.setDmlVersion("0");
@@ -165,11 +180,11 @@ public class DatabaseUpgradeExecutor {
 	 * @param upgradeConfigInfo 升级配置信息
 	 * @return VersionInfo 版本信息
 	 */
-	private VersionInfo getVersionInfoFromDataBase(DataSource dataSource, UpgradeConfig upgradeConfigInfo){
+	private DatabaseVersion getVersionInfoFromDataBase(DataSource dataSource, UpgradeConfig upgradeConfigInfo){
 		QueryRunner queryRunner = new QueryRunner(dataSource);
 		String sql = "select * from versionInfo where domain = ?";
 		try {
-			return queryRunner.query(sql, new BeanHandler<>(VersionInfo.class),
+			return queryRunner.query(sql, new BeanHandler<>(DatabaseVersion.class),
 					upgradeConfigInfo.getDomain());
 		} catch (SQLException e) {
 			throw new RuntimeException("从数据库查询版本信息失败");
@@ -180,8 +195,8 @@ public class DatabaseUpgradeExecutor {
 	 * 执行数据库定义语言的升级脚本
 	 * @param versionInfoList 系统模块的版本管理列表
 	 */
-	private void ddlScriptupgrade(List<VersionInfo> versionInfoList) {
-		for (VersionInfo versionInfo : versionInfoList) {
+	private void ddlScriptupgrade(List<DatabaseVersion> versionInfoList) {
+		for (DatabaseVersion versionInfo : versionInfoList) {
 			if (null == versionInfo) {
 				continue;
 			}
@@ -196,8 +211,8 @@ public class DatabaseUpgradeExecutor {
 	 * 执行数据库操作语言的升级脚本
 	 * @param versionInfoList 系统模块的版本管理列表
 	 */
-	private void dmlScriptupgrade(List<VersionInfo> versionInfoList) {
-		for (VersionInfo versionInfo : versionInfoList) {
+	private void dmlScriptupgrade(List<DatabaseVersion> versionInfoList) {
+		for (DatabaseVersion versionInfo : versionInfoList) {
 			if (null == versionInfo) {
 				continue;
 			}
