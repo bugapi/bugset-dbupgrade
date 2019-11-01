@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <domain>test</domain>
+  <comment>test</comment>
+  <ddlVersion>1</ddlVersion>
+  <dmlVersion>1</dmlVersion>
+  <ddlPublishVersion>1</ddlPublishVersion>
+  <dmlPublishVersion>1</dmlPublishVersion>
+  <ddlFilePath>test</ddlFilePath>
+  <dmlFilePath>test</dmlFilePath>
+  <ddlFilePrefix>test</ddlFilePrefix>
+  <dmlFilePrefix>test</dmlFilePrefix>
+</root>
