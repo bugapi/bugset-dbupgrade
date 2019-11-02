@@ -11,6 +11,11 @@ import lombok.Data;
 @Data
 public class DatabaseUpgradeVersion {
 
+    /**
+     * 业务
+     */
+    private String business;
+
     /** ddl当前版本号【本次升级前的版本号】 */
     private int ddlCurrentVersion;
 

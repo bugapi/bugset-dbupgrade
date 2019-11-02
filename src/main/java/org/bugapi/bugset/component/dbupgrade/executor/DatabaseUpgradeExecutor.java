@@ -7,16 +7,16 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.dbutils.handlers.BeanHandler;
 import org.bugapi.bugset.base.constant.EnvironmentEnum;
 import org.bugapi.bugset.base.util.collection.CollectionUtil;
-import org.bugapi.bugset.base.util.sql.DataBaseUtil;
 import org.bugapi.bugset.base.util.sql.MetaDataUtil;
 import org.bugapi.bugset.base.util.string.StringUtil;
 import org.bugapi.bugset.component.dbupgrade.database.DatabaseOperation;
@@ -71,154 +71,117 @@ public class DatabaseUpgradeExecutor {
 			log.error("没有获取到任何需要升级的配置信息");
 			return;
 		}
-		upgradeConfigs.sort();
+		upgradeConfigs.sort(Comparator.comparingInt(UpgradeConfig::getSeq));
 
 		//TODO 根据数据库类型使用不同的数据库操作代理
 		databaseOperation = new MySqlOperationDelegate(dataSource);
-		initDatabaseVersionTable(upgradeConfigs);
+		if (MetaDataUtil.existTable(dataSource, UPGRADE_TABLE_NAME)) {
+			compareAndInitVersionTable(upgradeConfigs);
+		} else {
+			log.info("数据库升级表不存在，初始化中...");
+			initDatabaseVersionTable(upgradeConfigs);
+		}
 
-		// 遍历升级配置信息，完善VersionInfo中的信息，为后边dml和ddl分开升级做准备
-		List<DatabaseVersion> versionInfoList = initDatabaseVersion(upgradeConfigs);
+		List<DatabaseUpgradeVersion> upgradeVersions = createUpgradeConfigs(upgradeConfigs);
+		//TODO 版本和文件的校验
 
 		// 进行ddl数据升级
-		ddlScriptupgrade(versionInfoList);
+		ddlScriptUpgrade(upgradeVersions);
+
 		// 进行dml数据升级
-		dmlScriptupgrade(versionInfoList);
+		dmlScriptUpgrade(upgradeVersions);
 	}
 
 	/**
-	 * 判断数据库升级配置表是否存在
-	 * 不存在则初始化
+	 * 数据库中不存在升级配置表，进行初始化
+	 * @param upgradeConfigs 升级配置
 	 */
 	private void initDatabaseVersionTable(List<UpgradeConfig> upgradeConfigs) {
-		if (!MetaDataUtil.existTable(dataSource, UPGRADE_TABLE_NAME)) {
-			// 如果升级表不存在就创建表
-			this.databaseOperation.initDatabaseVersionTable();
-			upgradeConfigs.stream().map(config -> {
-				DatabaseVersion databaseVersion = new DatabaseVersion();
-				databaseVersion.setBusiness(config.getBusiness());
-			})
-		}
+		this.databaseOperation.initDatabaseVersionTable();
+		initDatabaseVersionConfigs(upgradeConfigs);
+	}
+
+	/**
+	 * 初始化数据库配置
+	 * @param upgradeConfigs 数据库配置
+	 */
+	private void initDatabaseVersionConfigs(List<UpgradeConfig> upgradeConfigs) {
+		List<DatabaseVersion> initConfigs = upgradeConfigs.stream().map(config -> {
+			DatabaseVersion databaseVersion = new DatabaseVersion();
+			databaseVersion.setBusiness(config.getBusiness());
+			databaseVersion.setDescription(config.getDescription());
+			databaseVersion.setEnvironment(this.environment.getType());
+			databaseVersion.setDdlVersion(0);
+			databaseVersion.setDmlVersion(0);
+			Date date = new Date();
+			databaseVersion.setDdlUpgradeDate(date);
+			databaseVersion.setDmlUpgradeDate(date);
+			return databaseVersion;
+		}).collect(Collectors.toList());
+		this.databaseOperation.initDatabaseVersionConfigs(initConfigs);
+	}
+
+	/**
+	 * 数据库中已存在升级配置表，进行比较并初始化新增的业务
+	 * @param upgradeConfigs 升级配置
+	 */
+	private void compareAndInitVersionTable(List<UpgradeConfig> upgradeConfigs) {
+		List<DatabaseVersion> databaseVersions = this.databaseOperation.listDatabaseVersions();
+		Set<String> existBusinesses = databaseVersions.stream().map(DatabaseVersion::getBusiness)
+				.collect(Collectors.toSet());
+		List<UpgradeConfig> initConfigs = upgradeConfigs.stream().filter(upgradeConfig -> !existBusinesses
+				.contains(upgradeConfig.getBusiness())).collect(Collectors.toList());
+		initDatabaseVersionConfigs(initConfigs);
 	}
 
 	/**
 	 * 填充升级版本管理的字段信息，并返回一个版本管理的集合
-	 * @param upgradeConfigInfoList 升级配置集合
+	 * @param newVersions 升级配置集合
 	 * @return List<VersionInfo> 版本管理的集合
 	 */
-	private List<DatabaseUpgradeVersion> initDatabaseVersion(List<UpgradeConfig> upgradeConfigInfoList){
-		//根据模块名获取数据库版本信息
-		DatabaseUpgradeVersion upgradeVersion;
-		List<DatabaseUpgradeVersion> versionInfoList = new ArrayList<>();
-		for (UpgradeConfig upgradeConfigInfo : upgradeConfigInfoList) {
-			//根据模块名获取数据库版本信息
-			versionInfo = getVersionInfo(this.dataSource, upgradeConfigInfo);
-			// 以下信息是真实升级过程中用到的
-			versionInfo.setDdlFilePath(upgradeConfigInfo.getDdlFilePath());
-			versionInfo.setDdlFilePrefix(upgradeConfigInfo.getDdlFilePrefix());
-			versionInfo.setDmlFilePath(upgradeConfigInfo.getDmlFilePath());
-			versionInfo.setDmlFilePrefix(upgradeConfigInfo.getDmlFilePrefix());
-			// 如果是发布环境，则读取发布的版本号
-			if (EnvironmentEnum.PRO.equals(this.environment)) {
-				versionInfo.setDdlTargetVersion(upgradeConfigInfo.getDdlPublishVersion());
-				versionInfo.setDmlTargetVersion(upgradeConfigInfo.getDmlPublishVersion());
-				versionInfo.setDdlCurrentVersion(versionInfo.getDdlPublishVersion() == null ? 0 :
-						Integer.parseInt(versionInfo.getDdlPublishVersion()));
-				versionInfo.setDmlCurrentVersion(versionInfo.getDmlPublishVersion() == null ? 0 :
-						Integer.parseInt(versionInfo.getDmlPublishVersion()));
-			}else{
-				versionInfo.setDdlTargetVersion(upgradeConfigInfo.getDdlVersion());
-				versionInfo.setDmlTargetVersion(upgradeConfigInfo.getDmlVersion());
-				versionInfo.setDdlCurrentVersion(versionInfo.getDdlVersion() == null ? 0 :
-						Integer.parseInt(versionInfo.getDdlVersion()));
-				versionInfo.setDmlCurrentVersion(versionInfo.getDmlVersion() == null ? 0 :
-						Integer.parseInt(versionInfo.getDmlVersion()));
-			}
-			versionInfoList.add(versionInfo);
-		}
-		return versionInfoList;
-	}
-
-	/**
-	 * 获取升级的版本信息
-	 * @param dataSource 数据源
-	 * @param upgradeConfigInfo 升级配置信息
-	 * @return VersionInfo 版本信息
-	 */
-	private DatabaseVersion getVersionInfo(DataSource dataSource, UpgradeConfig upgradeConfigInfo) {
-		// 从数据库获取数据库升级的版本信息
-		DatabaseVersion versionInfo = getVersionInfoFromDataBase(dataSource, upgradeConfigInfo);
-		// 数据库获取不到信息，就创建一个基本信息，并保存到数据库中。
-		if(versionInfo == null){
-			versionInfo = new DatabaseVersion();
-			versionInfo.setDomain(upgradeConfigInfo.getDomain());
-			versionInfo.setDdlVersion("0");
-			versionInfo.setDmlVersion("0");
-			versionInfo.setDdlPublishVersion("0");
-			versionInfo.setDmlPublishVersion("0");
-			versionInfo.setComments(upgradeConfigInfo.getComment());
-			versionInfo.setDdlUpgradeDate(new Date());
-			versionInfo.setDmlUpgradeDate(new Date());
-
-			// 初始化第一条默认信息
-			DataBaseUtil.update(dataSource,
-					"insert into versionInfo (DOMAIN,comments,DDLVersion,DMLVersion,DDLUpgradedate,DMLUpgradedate," +
-							"ddlPublishVersion,dmlPublishVersion) values (?, ?, ?, ?, ?, ?,?,?)",
-					upgradeConfigInfo.getDomain(),
-					upgradeConfigInfo.getComment(),
-					"0","0",
-					new java.sql.Date(versionInfo.getDdlUpgradeDate().getTime()),
-					new java.sql.Date(versionInfo.getDmlUpgradeDate().getTime()),
-					"0","0");
-		}
-		return versionInfo;
-	}
-
-	/**
-	 * 从数据库获取数据库升级的版本信息
-	 * @param dataSource 数据库的数据源
-	 * @param upgradeConfigInfo 升级配置信息
-	 * @return VersionInfo 版本信息
-	 */
-	private DatabaseVersion getVersionInfoFromDataBase(DataSource dataSource, UpgradeConfig upgradeConfigInfo){
-		QueryRunner queryRunner = new QueryRunner(dataSource);
-		String sql = "select * from versionInfo where domain = ?";
-		try {
-			return queryRunner.query(sql, new BeanHandler<>(DatabaseVersion.class),
-					upgradeConfigInfo.getDomain());
-		} catch (SQLException e) {
-			throw new RuntimeException("从数据库查询版本信息失败");
-		}
+	private List<DatabaseUpgradeVersion> createUpgradeConfigs(List<UpgradeConfig> newVersions){
+		List<DatabaseVersion> oldVersions = this.databaseOperation.listDatabaseVersions();
+		Map<String, List<DatabaseVersion>> oldVersionsMap = oldVersions.stream()
+				.collect(Collectors.groupingBy(DatabaseVersion::getBusiness));
+		return newVersions.stream().map(newVersion -> {
+			DatabaseUpgradeVersion upgradeVersion = new DatabaseUpgradeVersion();
+			DatabaseVersion oldVersion = oldVersionsMap.get(newVersion.getBusiness()).get(0);
+			upgradeVersion.setBusiness(newVersion.getBusiness());
+			upgradeVersion.setDdlCurrentVersion(oldVersion.getDdlVersion());
+			upgradeVersion.setDmlCurrentVersion(oldVersion.getDdlVersion());
+			upgradeVersion.setDdlTargetVersion(newVersion.getDdlVersion());
+			upgradeVersion.setDmlTargetVersion(newVersion.getDmlVersion());
+			upgradeVersion.setDdlFilePath(newVersion.getDdlFilePath());
+			upgradeVersion.setDmlFilePath(newVersion.getDmlFilePath());
+			upgradeVersion.setDdlFilePrefix(newVersion.getDdlFilePrefix());
+			upgradeVersion.setDmlFilePrefix(newVersion.getDmlFilePrefix());
+			return upgradeVersion;
+		}).collect(Collectors.toList());
 	}
 
 	/**
 	 * 执行数据库定义语言的升级脚本
-	 * @param versionInfoList 系统模块的版本管理列表
+	 * @param upgradeVersions 待升级的版本
 	 */
-	private void ddlScriptupgrade(List<DatabaseVersion> versionInfoList) {
-		for (DatabaseVersion versionInfo : versionInfoList) {
-			if (null == versionInfo) {
-				continue;
-			}
+	private void ddlScriptUpgrade(List<DatabaseUpgradeVersion> upgradeVersions) {
+		for (DatabaseUpgradeVersion upgradeVersion : upgradeVersions) {
 			// 批量执行升级的sql语句【无全局事务控制】
-			batchExecuteUpgradeSql(versionInfo.getDomain(), versionInfo.getDdlCurrentVersion(),
-					versionInfo.getDdlTargetVersion(),
-					versionInfo.getDdlFilePath(), versionInfo.getDdlFilePrefix(), false);
+			batchExecuteUpgradeSql(upgradeVersion.getBusiness(), upgradeVersion.getDdlCurrentVersion(),
+					upgradeVersion.getDdlTargetVersion(), upgradeVersion.getDdlFilePath(),
+					upgradeVersion.getDdlFilePrefix(), false);
 		}
 	}
 
 	/**
 	 * 执行数据库操作语言的升级脚本
-	 * @param versionInfoList 系统模块的版本管理列表
+	 * @param upgradeVersions 待升级的版本
 	 */
-	private void dmlScriptupgrade(List<DatabaseVersion> versionInfoList) {
-		for (DatabaseVersion versionInfo : versionInfoList) {
-			if (null == versionInfo) {
-				continue;
-			}
+	private void dmlScriptUpgrade(List<DatabaseUpgradeVersion> upgradeVersions) {
+		for (DatabaseUpgradeVersion upgradeVersion : upgradeVersions) {
 			// 批量执行升级的sql语句【有全局事务控制】
-			batchExecuteUpgradeSql(versionInfo.getDomain(), versionInfo.getDmlCurrentVersion(), versionInfo.getDmlTargetVersion(),
-					versionInfo.getDmlFilePath(), versionInfo.getDmlFilePrefix(), true);
+			batchExecuteUpgradeSql(upgradeVersion.getBusiness(), upgradeVersion.getDmlCurrentVersion(),
+					upgradeVersion.getDmlTargetVersion(),
+					upgradeVersion.getDmlFilePath(), upgradeVersion.getDmlFilePrefix(), true);
 		}
 	}
 
@@ -254,13 +217,13 @@ public class DatabaseUpgradeExecutor {
 
 	/**
 	 * 不带事务控制的批量sql执行
-	 * @param domain 模块名称
+	 * @param business 模块名称
 	 * @param sqlList sql语句集合
 	 * @param currentVersion 升级前数据库中保存的上次升级的版本信息
 	 * @param filePrefix 升级脚本文件的文件前缀
 	 * @param flag true:dml类型的sql执行，false:ddl类型的sql执行
 	 */
-	private void batchExecuteSql(String domain, List<String> sqlList, int currentVersion, String filePrefix, boolean flag){
+	private void batchExecuteSql(String business, List<String> sqlList, int currentVersion, String filePrefix, boolean flag){
 		if (null == dataSource){
 			throw new RuntimeException("批量执行sql语句时，数据源为空");
 		}
@@ -274,13 +237,13 @@ public class DatabaseUpgradeExecutor {
 				}
 			}
 		}catch (SQLException e){
-			log.error("--->> " + domain + "Upgrade database from [ "
+			log.error("--->> " + business + "Upgrade database from [ "
 					+ filePrefix+"_" + (currentVersion-1) + " ] to [ " + filePrefix+"_"+ currentVersion + "] failed: the SQL scripts is: "
 					+ sqlTmp);
 			throw new RuntimeException("批量执行sql语句报错", e);
 		}
 		// 升级完成后修改数据库中版本升级版本表中的版本信息
-		updateVersionInfo(domain, currentVersion, filePrefix, flag);
+		updateVersionInfo(business, currentVersion, filePrefix, flag);
 	}
 
 	/**
@@ -345,32 +308,18 @@ public class DatabaseUpgradeExecutor {
 
 	/**
 	 * 升级完成后修改数据库中版本升级版本表中的版本信息
-	 * @param domain 模块名称
+	 * @param business 模块名称
 	 * @param currentVersion 升级后的当前版本号
 	 * @param filePrefix 文件前缀
 	 * @param flag 有事务控制的是dml脚本、无事务控制的是ddl脚本
 	 */
-	private void updateVersionInfo(String domain, int currentVersion, String filePrefix, boolean flag) {
-		String updateSql;
-		// flag=true 有事务控制
+	private void updateVersionInfo(String business, int currentVersion, String filePrefix, boolean flag) {
 		if (flag) {
-			// 生产环境的dml脚本升级
-			if (EnvironmentEnum.PRO == this.environment) {
-				updateSql = "update versionInfo set dmlUpgradeDate = ?, dmlPublishVersion = ? where domain = ?";
-			} else {
-				updateSql = "update versionInfo set dmlUpgradeDate = ?, dmlVersion = ? where domain = ?";
-			}
+			this.databaseOperation.updateVersionByBusiness(business, "dml", currentVersion);
 		} else {
-			// 生产环境的ddl脚本升级
-			if (EnvironmentEnum.PRO == this.environment) {
-				updateSql = "update versionInfo set ddlUpgradeDate = ?, ddlPublishVersion = ? where domain = ?";
-			} else {
-				updateSql = "update versionInfo set ddlUpgradeDate = ?, ddlVersion = ? where domain = ?";
-			}
+			this.databaseOperation.updateVersionByBusiness(business, "ddl", currentVersion);
 		}
-		// 更新升级版本表中的数据信息
-		DataBaseUtil.update(dataSource, updateSql, new java.sql.Date(System.currentTimeMillis()), currentVersion, domain);
-		log.error("--->> " + domain + "Upgrade database from [ "
+		log.error("--->> " + business + "Upgrade database from [ "
 				+ filePrefix + "_" + (currentVersion - 1) + " ] to [ " + filePrefix + "_" + currentVersion + "] success.");
 	}
 

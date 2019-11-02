@@ -1,9 +1,11 @@
 package org.bugapi.bugset.component.dbupgrade.database;
 
+import java.util.List;
 import javax.sql.DataSource;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bugapi.bugset.base.util.sql.DataBaseUtil;
+import org.bugapi.bugset.component.dbupgrade.domain.DatabaseVersion;
 
 /**
  * MySql数据库操作接口
@@ -36,5 +38,38 @@ public class MySqlOperationDelegate implements DatabaseOperation {
         + "ddl_upgrade_date timestamp default CURRENT_TIMESTAMP not null comment '最近的ddl升级时间',"
         + "dml_upgrade_date timestamp default CURRENT_TIMESTAMP not null comment '最近的dml升级时间') "
         + "comment '数据库升级版本表' charset=utf8");
+  }
+
+  /**
+   * 初始化配置
+   *
+   * @param initConfigs 数据库配置
+   */
+  @Override
+  public void initDatabaseVersionConfigs(List<DatabaseVersion> initConfigs) {
+
+  }
+
+  /**
+   * 根据业务类型更新版本号
+   *
+   * @param business 业务
+   * @param languageType 语言类型（ddl或dml）
+   * @param version 版本号
+   */
+  @Override
+  public void updateVersionByBusiness(String business, String languageType, int version) {
+    String updateSql = "update DATABASE_VERSION set " + languageType + "_upgrade_date = ?, " + languageType + "_version = ? where business = ?";
+    updateDataVersionTable(dataSource, updateSql, version, business);
+  }
+
+  /**
+   * 返回数据库中已经存在的所有升级配置
+   *
+   * @return 数据库升级配置
+   */
+  @Override
+  public List<DatabaseVersion> listDatabaseVersions() {
+    return selectDatabaseVersions(dataSource, "select * from DATABASE_VERSION");
   }
 }

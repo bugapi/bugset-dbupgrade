@@ -40,12 +40,12 @@ public class DatabaseVersion implements Serializable {
     /**
      * 数据定义语言升级版本号
      */
-    private String ddlVersion;
+    private int ddlVersion;
 
     /**
      * 数据操作语言升级版本号
      */
-    private String dmlVersion;
+    private int dmlVersion;
 
     /**
      * ddl升级时间
