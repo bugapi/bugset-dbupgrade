@@ -55,6 +55,12 @@
       <version>${bugset.base.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.bugapi.bugset.base</groupId>
+      <artifactId>bugset-base-Exception</artifactId>
+      <version>${bugset.base.version}</version>
+    </dependency>
+
     <!-- slf4j 所需的jar包 -->
     <dependency>
       <groupId>org.slf4j</groupId>

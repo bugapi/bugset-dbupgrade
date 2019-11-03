@@ -1,6 +1,7 @@
 package org.bugapi.bugset.component.dbupgrade.database;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +48,11 @@ public class MySqlOperationDelegate implements DatabaseOperation {
    */
   @Override
   public void initDatabaseVersionConfigs(List<DatabaseVersion> initConfigs) {
-
+    List<String> initSQLs = initConfigs.stream().map(initConfig -> String.format(
+        "insert into DATABASE_VERSION(business, description, environment, ddl_version, dml_version) values (%s, %s, %s, %d, %d)",
+        initConfig.getBusiness(), initConfig.getDescription(), initConfig.getEnvironment(), 0, 0))
+        .collect(Collectors.toList());
+    DataBaseUtil.batchExecuteSqlWithTransaction(initSQLs, dataSource);
   }
 
   /**
