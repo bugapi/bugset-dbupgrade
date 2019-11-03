@@ -4,11 +4,8 @@ import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeCon
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.sql.SQLException;
 import java.util.Comparator;
 import java.util.Date;
@@ -223,13 +220,9 @@ public class DatabaseUpgradeExecutor {
 			String filePath, String filePrefix, String languageType) throws DatabaseUpgradeException {
 		// 读取脚本文件获取到的字符缓冲输入流
 		List<String> sqlList;
-		Path path;
 		while (targetVersion > currentVersion) {
-			// 获取文件路径
-			path = getScriptFilePath(filePath, filePrefix, ++currentVersion);
-			// 获取sql文件的输入流
-			try (InputStream inputStream = Files.newInputStream(path, StandardOpenOption.READ)) {
-				sqlList = DataBaseUtil.readSql(inputStream);
+			try {
+				sqlList = DataBaseUtil.readSql(getScriptFilePath(filePath, filePrefix, ++currentVersion));
 				if ("ddl".equals(languageType)) {
 					DataBaseUtil.batchExecuteSqlWithTransaction(sqlList, dataSource);
 				} else {
