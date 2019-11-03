@@ -18,8 +18,9 @@ public interface DatabaseOperation {
 
   /**
    * 创建版本表
+   * @throws SQLException SQL执行异常
    */
-  void initDatabaseVersionTable();
+  void initDatabaseVersionTable() throws SQLException;
 
   /**
    * 返回数据库中已经存在的所有升级配置
@@ -30,16 +31,19 @@ public interface DatabaseOperation {
   /**
    * 初始化配置
    * @param initConfigs 数据库配置
+   * @throws SQLException SQL执行异常
    */
-  void initDatabaseVersionConfigs(List<DatabaseVersion> initConfigs);
+  void initDatabaseVersionConfigs(List<DatabaseVersion> initConfigs) throws SQLException;
 
   /**
    * 根据业务类型更新版本号
    * @param business 业务
    * @param languageType 语言类型（ddl或dml）
    * @param version 版本号
+   * @throws SQLException SQL执行异常
    */
-  void updateVersionByBusiness(String business, String languageType, int version);
+  void updateVersionByBusiness(String business, String languageType, int version)
+      throws SQLException;
 
   /**
    * 更新数据库升级表
@@ -48,7 +52,8 @@ public interface DatabaseOperation {
    * @param version 版本号
    * @param business 业务
    */
-  default void updateDataVersionTable(DataSource dataSource, String updateSql, int version, String business) {
+  default void updateDataVersionTable(DataSource dataSource, String updateSql, int version, String business)
+      throws SQLException {
     DataBaseUtil
         .update(dataSource, updateSql, new java.sql.Date(System.currentTimeMillis()), version, business);
   }

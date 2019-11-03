@@ -1,5 +1,6 @@
 package org.bugapi.bugset.component.dbupgrade.database;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
@@ -25,9 +26,10 @@ public class MySqlOperationDelegate implements DatabaseOperation {
 
   /**
    * 创建版本表
+   * @throws SQLException SQL执行异常
    */
   @Override
-  public void initDatabaseVersionTable() {
+  public void initDatabaseVersionTable() throws SQLException {
     //创建表
     DataBaseUtil.update(dataSource, "CREATE TABLE DATABASE_VERSION ("
         + "id bigint(10) unsigned auto_increment primary key comment 'id',"
@@ -43,11 +45,11 @@ public class MySqlOperationDelegate implements DatabaseOperation {
 
   /**
    * 初始化配置
-   *
    * @param initConfigs 数据库配置
+   * @throws SQLException SQL执行异常
    */
   @Override
-  public void initDatabaseVersionConfigs(List<DatabaseVersion> initConfigs) {
+  public void initDatabaseVersionConfigs(List<DatabaseVersion> initConfigs) throws SQLException {
     List<String> initSQLs = initConfigs.stream().map(initConfig -> String.format(
         "insert into DATABASE_VERSION(business, description, environment, ddl_version, dml_version) values (%s, %s, %s, %d, %d)",
         initConfig.getBusiness(), initConfig.getDescription(), initConfig.getEnvironment(), 0, 0))
@@ -57,13 +59,14 @@ public class MySqlOperationDelegate implements DatabaseOperation {
 
   /**
    * 根据业务类型更新版本号
-   *
    * @param business 业务
    * @param languageType 语言类型（ddl或dml）
    * @param version 版本号
+   * @throws SQLException SQL执行异常
    */
   @Override
-  public void updateVersionByBusiness(String business, String languageType, int version) {
+  public void updateVersionByBusiness(String business, String languageType, int version)
+      throws SQLException {
     String updateSql = "update DATABASE_VERSION set " + languageType + "_upgrade_date = ?, " + languageType + "_version = ? where business = ?";
     updateDataVersionTable(dataSource, updateSql, version, business);
   }

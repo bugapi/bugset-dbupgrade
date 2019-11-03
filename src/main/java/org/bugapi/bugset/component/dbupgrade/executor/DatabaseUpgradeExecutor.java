@@ -101,8 +101,13 @@ public class DatabaseUpgradeExecutor {
 	 * 数据库中不存在升级配置表，进行初始化
 	 * @param upgradeConfigs 升级配置
 	 */
-	private void initDatabaseVersionTable(List<UpgradeConfig> upgradeConfigs) {
-		this.databaseOperation.initDatabaseVersionTable();
+	private void initDatabaseVersionTable(List<UpgradeConfig> upgradeConfigs)
+			throws DatabaseUpgradeException {
+		try {
+			this.databaseOperation.initDatabaseVersionTable();
+		} catch (SQLException e) {
+			throw new DatabaseUpgradeException("数据库升级表初始化失败", e);
+		}
 		initDatabaseVersionConfigs(upgradeConfigs);
 	}
 
@@ -110,7 +115,8 @@ public class DatabaseUpgradeExecutor {
 	 * 初始化数据库配置
 	 * @param upgradeConfigs 数据库配置
 	 */
-	private void initDatabaseVersionConfigs(List<UpgradeConfig> upgradeConfigs) {
+	private void initDatabaseVersionConfigs(List<UpgradeConfig> upgradeConfigs)
+			throws DatabaseUpgradeException {
 		List<DatabaseVersion> initConfigs = upgradeConfigs.stream().map(config -> {
 			DatabaseVersion databaseVersion = new DatabaseVersion();
 			databaseVersion.setBusiness(config.getBusiness());
@@ -123,20 +129,29 @@ public class DatabaseUpgradeExecutor {
 			databaseVersion.setDmlUpgradeDate(date);
 			return databaseVersion;
 		}).collect(Collectors.toList());
-		this.databaseOperation.initDatabaseVersionConfigs(initConfigs);
+		try {
+			this.databaseOperation.initDatabaseVersionConfigs(initConfigs);
+		} catch (SQLException e) {
+			throw new DatabaseUpgradeException("数据库升级表配置初始化失败", e);
+		}
 	}
 
 	/**
 	 * 数据库中已存在升级配置表，进行比较并初始化新增的业务
 	 * @param upgradeConfigs 升级配置
 	 */
-	private void compareAndInitVersionTable(List<UpgradeConfig> upgradeConfigs) {
+	private void compareAndInitVersionTable(List<UpgradeConfig> upgradeConfigs)
+			throws DatabaseUpgradeException {
 		List<DatabaseVersion> databaseVersions = this.databaseOperation.listDatabaseVersions();
 		Set<String> existBusinesses = databaseVersions.stream().map(DatabaseVersion::getBusiness)
 				.collect(Collectors.toSet());
 		List<UpgradeConfig> initConfigs = upgradeConfigs.stream().filter(upgradeConfig -> !existBusinesses
 				.contains(upgradeConfig.getBusiness())).collect(Collectors.toList());
-		initDatabaseVersionConfigs(initConfigs);
+		try {
+			initDatabaseVersionConfigs(initConfigs);
+		} catch (DatabaseUpgradeException e) {
+			throw new DatabaseUpgradeException("数据库升级表配置初始化失败", e);
+		}
 	}
 
 	/**
@@ -235,8 +250,13 @@ public class DatabaseUpgradeExecutor {
 	 * @param filePrefix 文件前缀
 	 * @param languageType 语言类型
 	 */
-	private void updateVersionInfo(String business, int currentVersion, String filePrefix, String languageType) {
-		this.databaseOperation.updateVersionByBusiness(business, languageType, currentVersion);
+	private void updateVersionInfo(String business, int currentVersion, String filePrefix, String languageType)
+			throws DatabaseUpgradeException {
+		try {
+			this.databaseOperation.updateVersionByBusiness(business, languageType, currentVersion);
+		} catch (SQLException e) {
+			throw new DatabaseUpgradeException("更新版本号失败", e);
+		}
 		log.info("--->> " + business + "Upgrade database from [ "
 				+ filePrefix + "_" + (currentVersion - 1) + " ] to [ " + filePrefix + "_" + currentVersion + "] success.");
 	}
