@@ -10,6 +10,10 @@ import org.bugapi.bugset.base.exception.BugSetException;
  */
 public class DatabaseUpgradeException extends BugSetException {
 
+  public DatabaseUpgradeException(String message) {
+    super(message);
+  }
+
   public DatabaseUpgradeException(String message, Throwable cause) {
     super(message, cause);
   }

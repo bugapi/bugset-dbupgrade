@@ -272,4 +272,18 @@ public class DatabaseUpgradeExecutor {
 		log.info("尝试从如下路径查找升级脚本:" + scriptFilePath.toString());
 		return scriptFilePath;
 	}
+
+	private void validateSqlFile(String business, int currentVersion, int targetVersion,
+			String filePath, String filePrefix, String languageType) throws DatabaseUpgradeException {
+		// 读取脚本文件获取到的字符缓冲输入流
+		List<String> sqlList;
+		Path scriptFilePath;
+		while (targetVersion > currentVersion) {
+			scriptFilePath = getScriptFilePath(filePath, filePrefix, ++currentVersion);
+			if (!scriptFilePath.toFile().exists()) {
+				throw new DatabaseUpgradeException(languageType + "升级文件在路径" + scriptFilePath.toString() + "下不存在");
+			}
+		}
+		updateVersionInfo(business, currentVersion, filePrefix, languageType);
+	}
 }
