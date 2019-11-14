@@ -36,14 +36,14 @@ public class UpgradeConfig implements Serializable {
     private int dmlVersion;
 
     /**
-     * 升级脚本相对于根目录的ddl路径
+     * ddl升级脚本相对于脚本根目录的目录
      */
-    private String ddlFilePath;
+    private String ddlFileDirectory;
 
     /**
-     * 升级脚本相对于根目录的dml路径
+     * dml升级脚本相对于脚本根目录的目录
      */
-    private String dmlFilePath;
+    private String dmlFileDirectory;
 
     /**
      * ddl升级脚本前缀

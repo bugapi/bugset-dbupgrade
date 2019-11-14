@@ -21,6 +21,7 @@ import org.bugapi.bugset.base.constant.EnvironmentEnum;
 import org.bugapi.bugset.base.util.collection.CollectionUtil;
 import org.bugapi.bugset.base.util.sql.DataBaseUtil;
 import org.bugapi.bugset.base.util.sql.MetaDataUtil;
+import org.bugapi.bugset.base.util.string.StringUtil;
 import org.bugapi.bugset.component.dbupgrade.database.DatabaseOperation;
 import org.bugapi.bugset.component.dbupgrade.database.MySqlOperationDelegate;
 import org.bugapi.bugset.component.dbupgrade.domain.DatabaseUpgradeVersion;
@@ -77,9 +78,9 @@ public class DatabaseUpgradeExecutor {
 	 */
 	public void upgrade() throws DatabaseUpgradeException {
 		// 获取升级配置信息
-		List<UpgradeConfig> upgradeConfigs = parser.parseUpgradeConfigs();
+		List<UpgradeConfig> upgradeConfigs = parser.parseUpgradeConfigs(scriptDirectory);
 		if (CollectionUtil.isEmpty(upgradeConfigs)) {
-			log.error("没有获取到任何需要升级的配置信息");
+			log.error("未查询到任何需要升级的配置信息，升级终止...");
 			return;
 		}
 		upgradeConfigs.sort(Comparator.comparingInt(UpgradeConfig::getSeq));
@@ -93,7 +94,7 @@ public class DatabaseUpgradeExecutor {
 			initDatabaseVersionTable(upgradeConfigs);
 		}
 
-		List<DatabaseUpgradeVersion> upgradeVersions = createUpgradeConfigs(upgradeConfigs);
+		List<DatabaseUpgradeVersion> upgradeVersions = createUpgradeVersions(upgradeConfigs);
 
 		// 进行ddl数据校验
 		ddlScriptValidate(upgradeVersions);
@@ -170,7 +171,7 @@ public class DatabaseUpgradeExecutor {
 	 * @param newVersions 升级配置集合
 	 * @return List<VersionInfo> 版本管理的集合
 	 */
-	private List<DatabaseUpgradeVersion> createUpgradeConfigs(List<UpgradeConfig> newVersions){
+	private List<DatabaseUpgradeVersion> createUpgradeVersions(List<UpgradeConfig> newVersions){
 		List<DatabaseVersion> oldVersions = this.databaseOperation.listDatabaseVersions();
 		Map<String, List<DatabaseVersion>> oldVersionsMap = oldVersions.stream()
 				.collect(Collectors.groupingBy(DatabaseVersion::getBusiness));
@@ -182,10 +183,26 @@ public class DatabaseUpgradeExecutor {
 			upgradeVersion.setDmlCurrentVersion(oldVersion.getDdlVersion());
 			upgradeVersion.setDdlTargetVersion(newVersion.getDdlVersion());
 			upgradeVersion.setDmlTargetVersion(newVersion.getDmlVersion());
-			upgradeVersion.setDdlFilePath(newVersion.getDdlFilePath());
-			upgradeVersion.setDmlFilePath(newVersion.getDmlFilePath());
-			upgradeVersion.setDdlFilePrefix(newVersion.getDdlFilePrefix());
-			upgradeVersion.setDmlFilePrefix(newVersion.getDmlFilePrefix());
+			if (StringUtil.isBlank(newVersion.getDdlFileDirectory())) {
+				upgradeVersion.setDdlFileDirectory(newVersion.getBusiness());
+			} else {
+				upgradeVersion.setDdlFileDirectory(newVersion.getDdlFileDirectory());
+			}
+			if (StringUtil.isBlank(newVersion.getDmlFileDirectory())) {
+				upgradeVersion.setDmlFileDirectory(newVersion.getBusiness());
+			} else {
+				upgradeVersion.setDmlFileDirectory(newVersion.getDmlFileDirectory());
+			}
+			if (StringUtil.isBlank(newVersion.getDdlFilePrefix())) {
+				upgradeVersion.setDdlFilePrefix(newVersion.getBusiness());
+			} else {
+				upgradeVersion.setDdlFilePrefix(newVersion.getDdlFilePrefix());
+			}
+			if (StringUtil.isBlank(newVersion.getDmlFilePrefix())) {
+				upgradeVersion.setDmlFilePrefix(newVersion.getBusiness());
+			} else {
+				upgradeVersion.setDmlFilePrefix(newVersion.getDmlFilePrefix());
+			}
 			return upgradeVersion;
 		}).collect(Collectors.toList());
 	}
@@ -200,7 +217,7 @@ public class DatabaseUpgradeExecutor {
 		for (DatabaseUpgradeVersion upgradeVersion : upgradeVersions) {
 			// 批量执行升级的sql语句【无全局事务控制】
 			batchExecuteUpgradeSql(upgradeVersion.getBusiness(), upgradeVersion.getDdlCurrentVersion(),
-					upgradeVersion.getDdlTargetVersion(), upgradeVersion.getDdlFilePath(),
+					upgradeVersion.getDdlTargetVersion(), upgradeVersion.getDdlFileDirectory(),
 					upgradeVersion.getDdlFilePrefix(), DDL);
 		}
 	}
@@ -216,7 +233,7 @@ public class DatabaseUpgradeExecutor {
 			// 批量执行升级的sql语句【有全局事务控制】
 			batchExecuteUpgradeSql(upgradeVersion.getBusiness(), upgradeVersion.getDmlCurrentVersion(),
 					upgradeVersion.getDmlTargetVersion(),
-					upgradeVersion.getDmlFilePath(), upgradeVersion.getDmlFilePrefix(), DML);
+					upgradeVersion.getDmlFileDirectory(), upgradeVersion.getDmlFilePrefix(), DML);
 		}
 	}
 
@@ -237,7 +254,7 @@ public class DatabaseUpgradeExecutor {
 		while (targetVersion > currentVersion) {
 			try {
 				sqlList = DataBaseUtil.readSql(getScriptFilePath(filePath, filePrefix, ++currentVersion));
-				if ("ddl".equals(languageType)) {
+				if (DDL.equals(languageType)) {
 					DataBaseUtil.batchExecuteSqlWithTransaction(sqlList, dataSource);
 				} else {
 					DataBaseUtil.batchExecuteSql(sqlList, dataSource);
@@ -309,7 +326,7 @@ public class DatabaseUpgradeExecutor {
 		for (DatabaseUpgradeVersion upgradeVersion : upgradeVersions) {
 			// 批量执行升级的sql语句【无全局事务控制】
 			validateSqlFile(upgradeVersion.getBusiness(), upgradeVersion.getDdlCurrentVersion(),
-					upgradeVersion.getDdlTargetVersion(), upgradeVersion.getDdlFilePath(),
+					upgradeVersion.getDdlTargetVersion(), upgradeVersion.getDdlFileDirectory(),
 					upgradeVersion.getDdlFilePrefix(), DDL);
 		}
 	}
@@ -324,7 +341,7 @@ public class DatabaseUpgradeExecutor {
 		for (DatabaseUpgradeVersion upgradeVersion : upgradeVersions) {
 			validateSqlFile(upgradeVersion.getBusiness(), upgradeVersion.getDmlCurrentVersion(),
 					upgradeVersion.getDmlTargetVersion(),
-					upgradeVersion.getDmlFilePath(), upgradeVersion.getDmlFilePrefix(), DML);
+					upgradeVersion.getDmlFileDirectory(), upgradeVersion.getDmlFilePrefix(), DML);
 		}
 	}
 

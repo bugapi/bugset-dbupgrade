@@ -6,8 +6,8 @@
   <dmlVersion>1</dmlVersion>
   <ddlPublishVersion>1</ddlPublishVersion>
   <dmlPublishVersion>1</dmlPublishVersion>
-  <ddlFilePath>test</ddlFilePath>
-  <dmlFilePath>test</dmlFilePath>
+  <ddlFileDirectory>test</ddlFileDirectory>
+  <dmlFileDirectory>test</dmlFileDirectory>
   <ddlFilePrefix>test</ddlFilePrefix>
   <dmlFilePrefix>test</dmlFilePrefix>
 </root>

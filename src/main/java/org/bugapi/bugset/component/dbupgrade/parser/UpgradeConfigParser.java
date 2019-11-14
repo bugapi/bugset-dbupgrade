@@ -14,7 +14,8 @@ public interface UpgradeConfigParser {
   /**
    * 解析升级配置文件
    * @return 升级配置集合
+   * @param scriptRootDirectory 脚本根目录
    */
-  List<UpgradeConfig> parseUpgradeConfigs();
+  List<UpgradeConfig> parseUpgradeConfigs(String scriptRootDirectory);
 
 }

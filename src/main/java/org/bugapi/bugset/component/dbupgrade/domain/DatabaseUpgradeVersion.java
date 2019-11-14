@@ -28,11 +28,11 @@ public class DatabaseUpgradeVersion {
     /** dml目标版本号【本次要升级到的版本号】 */
     private int dmlTargetVersion;
 
-    /** 升级脚本相对于根目录的ddl路径 */
-    private String ddlFilePath;
+    /** ddl升级脚本相对于脚本根目录的目录 */
+    private String ddlFileDirectory;
 
-    /** 升级脚本相对于根目录的dml路径 */
-    private String dmlFilePath;
+    /** dml升级脚本相对于脚本根目录的目录 */
+    private String dmlFileDirectory;
 
     /** 数据定义语言脚本文件名前缀 */
     private String ddlFilePrefix;

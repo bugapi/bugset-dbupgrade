@@ -1,6 +1,6 @@
 package org.bugapi.bugset.component.dbupgrade;
 
-import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.DEFAULT_SCRIPT_DIRECTORY;
+import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.DEFAULT_SCRIPT_ROOT_DIRECTORY;
 
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +69,7 @@ public class DatabaseUpgrade {
 			parser = new DefaultUpgradeConfigParser();
 		}
 		if (StringUtil.isBlank(scriptDirectory)) {
-			scriptDirectory = DEFAULT_SCRIPT_DIRECTORY;
+			scriptDirectory = DEFAULT_SCRIPT_ROOT_DIRECTORY;
 		}
 		DatabaseUpgradeExecutor executor = new DatabaseUpgradeExecutor(environment, dataSource, parser, scriptDirectory);
 		executor.upgrade();

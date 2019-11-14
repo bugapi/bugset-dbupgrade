@@ -29,10 +29,11 @@ public class DefaultUpgradeConfigParser implements UpgradeConfigParser {
 	/**
 	 * 解析配置文件获取升级配置信息列表
 	 * @return List<UpgradeConfigInfo> 升级的配置信息列表
+	 * @param scriptRootDirectory 脚本根目录
 	 */
 	@Override
-	public List<UpgradeConfig> parseUpgradeConfigs() {
-		URL upgrade = ClassLoader.getSystemResource("upgrade");
+	public List<UpgradeConfig> parseUpgradeConfigs(String scriptRootDirectory) {
+		URL upgrade = ClassLoader.getSystemResource(scriptRootDirectory);
 		URI uri;
 		try {
 			uri = upgrade.toURI();
