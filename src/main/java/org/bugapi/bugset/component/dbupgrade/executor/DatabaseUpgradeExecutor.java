@@ -58,10 +58,17 @@ public class DatabaseUpgradeExecutor {
 	 */
 	private DatabaseOperation databaseOperation;
 
-	public DatabaseUpgradeExecutor(EnvironmentEnum environment, DataSource dataSource, UpgradeConfigParser upgradeConfigParser) {
+	/**
+	 * 脚本文件目录
+	 */
+	private String scriptDirectory;
+
+	public DatabaseUpgradeExecutor(EnvironmentEnum environment, DataSource dataSource,
+			UpgradeConfigParser upgradeConfigParser, String scriptDirectory) {
 		this.environment = environment;
 		this.dataSource = dataSource;
 		this.parser = upgradeConfigParser;
+		this.scriptDirectory = scriptDirectory;
 	}
 
 	/**

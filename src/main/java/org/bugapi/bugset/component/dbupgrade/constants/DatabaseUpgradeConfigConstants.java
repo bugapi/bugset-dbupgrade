@@ -23,6 +23,11 @@ public class DatabaseUpgradeConfigConstants {
    */
   public static final String DDL = "dml";
 
+  /**
+   * 默认脚本目录
+   */
+  public static final String DEFAULT_SCRIPT_DIRECTORY = "upgrade";
+
 
   /** domain必须与数据库中UPGRADE_VERSION相对应 */
   public static final String DOMAIN = "domain";

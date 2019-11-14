@@ -1,8 +1,11 @@
 package org.bugapi.bugset.component.dbupgrade;
 
+import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.DEFAULT_SCRIPT_DIRECTORY;
+
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.bugapi.bugset.base.constant.EnvironmentEnum;
+import org.bugapi.bugset.base.util.string.StringUtil;
 import org.bugapi.bugset.component.dbupgrade.exception.DatabaseUpgradeException;
 import org.bugapi.bugset.component.dbupgrade.executor.DatabaseUpgradeExecutor;
 import org.bugapi.bugset.component.dbupgrade.parser.DefaultUpgradeConfigParser;
@@ -17,16 +20,31 @@ import org.bugapi.bugset.component.dbupgrade.parser.UpgradeConfigParser;
 @Slf4j
 public class DatabaseUpgrade {
 
+	/**
+	 * 数据源
+	 */
 	private DataSource dataSource;
 
+	/**
+	 * 升级配置解析器
+	 */
 	private UpgradeConfigParser parser;
+
+	/**
+	 * 脚本文件目录
+	 */
+	private String scriptDirectory;
+
 
 	public DatabaseUpgrade(DataSource dataSource) {
 		this.dataSource = dataSource;
 	}
 
-	public DatabaseUpgrade(DataSource dataSource, UpgradeConfigParser parser) {
-		this.dataSource = dataSource;
+	public void setScriptDirectory(String scriptDirectory) {
+		this.scriptDirectory = scriptDirectory;
+	}
+
+	public void setParser(UpgradeConfigParser parser) {
 		this.parser = parser;
 	}
 
@@ -50,7 +68,10 @@ public class DatabaseUpgrade {
 		if (parser == null) {
 			parser = new DefaultUpgradeConfigParser();
 		}
-		DatabaseUpgradeExecutor executor = new DatabaseUpgradeExecutor(environment, dataSource, parser);
+		if (StringUtil.isBlank(scriptDirectory)) {
+			scriptDirectory = DEFAULT_SCRIPT_DIRECTORY;
+		}
+		DatabaseUpgradeExecutor executor = new DatabaseUpgradeExecutor(environment, dataSource, parser, scriptDirectory);
 		executor.upgrade();
 		log.info("数据库升级完成...");
 	}
