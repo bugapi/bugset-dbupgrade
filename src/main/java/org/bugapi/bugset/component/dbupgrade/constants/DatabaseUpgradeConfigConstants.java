@@ -13,6 +13,17 @@ public class DatabaseUpgradeConfigConstants {
    */
   public static final String UPGRADE_TABLE_NAME = "DATABASEVERSION";
 
+  /**
+   * 语言类型-ddl
+   */
+  public static final String DML = "ddl";
+
+  /**
+   * 语言类型-dml
+   */
+  public static final String DDL = "dml";
+
+
   /** domain必须与数据库中UPGRADE_VERSION相对应 */
   public static final String DOMAIN = "domain";
 

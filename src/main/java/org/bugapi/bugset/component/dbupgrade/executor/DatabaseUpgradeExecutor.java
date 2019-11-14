@@ -1,5 +1,7 @@
 package org.bugapi.bugset.component.dbupgrade.executor;
 
+import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.DDL;
+import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.DML;
 import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.UPGRADE_TABLE_NAME;
 
 import java.io.File;
@@ -85,7 +87,12 @@ public class DatabaseUpgradeExecutor {
 		}
 
 		List<DatabaseUpgradeVersion> upgradeVersions = createUpgradeConfigs(upgradeConfigs);
-		//TODO 版本和文件的校验
+
+		// 进行ddl数据校验
+		ddlScriptValidate(upgradeVersions);
+
+		// 进行dml数据校验
+		dmlScriptValidate(upgradeVersions);
 
 		// 进行ddl数据升级
 		ddlScriptUpgrade(upgradeVersions);
@@ -187,7 +194,7 @@ public class DatabaseUpgradeExecutor {
 			// 批量执行升级的sql语句【无全局事务控制】
 			batchExecuteUpgradeSql(upgradeVersion.getBusiness(), upgradeVersion.getDdlCurrentVersion(),
 					upgradeVersion.getDdlTargetVersion(), upgradeVersion.getDdlFilePath(),
-					upgradeVersion.getDdlFilePrefix(), "ddl");
+					upgradeVersion.getDdlFilePrefix(), DDL);
 		}
 	}
 
@@ -202,7 +209,7 @@ public class DatabaseUpgradeExecutor {
 			// 批量执行升级的sql语句【有全局事务控制】
 			batchExecuteUpgradeSql(upgradeVersion.getBusiness(), upgradeVersion.getDmlCurrentVersion(),
 					upgradeVersion.getDmlTargetVersion(),
-					upgradeVersion.getDmlFilePath(), upgradeVersion.getDmlFilePrefix(), "dml");
+					upgradeVersion.getDmlFilePath(), upgradeVersion.getDmlFilePrefix(), DML);
 		}
 	}
 
@@ -230,28 +237,40 @@ public class DatabaseUpgradeExecutor {
 				}
 			} catch (IOException | SQLException e) {
 				throw new DatabaseUpgradeException(
-						business + languageType + (currentVersion - 1) + "-" + currentVersion + "失败", e);
+						getSqlFileInfo(business, currentVersion, targetVersion, languageType) + "升级失败", e);
 			}
 		}
-		updateVersionInfo(business, currentVersion, filePrefix, languageType);
+		updateVersionInfo(business, currentVersion, languageType);
+	}
+
+	/**
+	 * 信息提示
+	 * @param business 模块名称
+	 * @param currentVersion 当前版本号
+	 * @param targetVersion 目标版本号
+	 * @param languageType 语言类型
+	 * @return 信息提示
+	 */
+	private String getSqlFileInfo(String business, int currentVersion, int targetVersion,
+			String languageType) {
+		return String.format("业务类型：%s 语言类型：%s 版本：%d -> %d ", business, languageType, currentVersion,
+				targetVersion);
 	}
 
 	/**
 	 * 升级完成后修改数据库中版本升级版本表中的版本信息
 	 * @param business 模块名称
-	 * @param currentVersion 升级后的当前版本号
-	 * @param filePrefix 文件前缀
+	 * @param currentVersion 升级后的版本号
 	 * @param languageType 语言类型
 	 */
-	private void updateVersionInfo(String business, int currentVersion, String filePrefix, String languageType)
+	private void updateVersionInfo(String business, int currentVersion, String languageType)
 			throws DatabaseUpgradeException {
 		try {
 			this.databaseOperation.updateVersionByBusiness(business, languageType, currentVersion);
 		} catch (SQLException e) {
 			throw new DatabaseUpgradeException("更新版本号失败", e);
 		}
-		log.info("--->> " + business + "Upgrade database from [ "
-				+ filePrefix + "_" + (currentVersion - 1) + " ] to [ " + filePrefix + "_" + currentVersion + "] success.");
+		log.info(getSqlFileInfo(business, currentVersion - 1, currentVersion, languageType) + "成功");
 	}
 
 	/**
@@ -273,17 +292,55 @@ public class DatabaseUpgradeExecutor {
 		return scriptFilePath;
 	}
 
+	/**
+	 * 校验数据库定义语言的升级脚本
+	 * @param upgradeVersions 待升级的版本
+	 * @throws DatabaseUpgradeException 数据库升级异常
+	 */
+	private void ddlScriptValidate(List<DatabaseUpgradeVersion> upgradeVersions)
+			throws DatabaseUpgradeException {
+		for (DatabaseUpgradeVersion upgradeVersion : upgradeVersions) {
+			// 批量执行升级的sql语句【无全局事务控制】
+			validateSqlFile(upgradeVersion.getBusiness(), upgradeVersion.getDdlCurrentVersion(),
+					upgradeVersion.getDdlTargetVersion(), upgradeVersion.getDdlFilePath(),
+					upgradeVersion.getDdlFilePrefix(), DDL);
+		}
+	}
+
+	/**
+	 * 执行数据库操作语言的升级脚本
+	 * @param upgradeVersions 待升级的版本
+	 * @throws DatabaseUpgradeException 数据库升级异常
+	 */
+	private void dmlScriptValidate(List<DatabaseUpgradeVersion> upgradeVersions)
+			throws DatabaseUpgradeException {
+		for (DatabaseUpgradeVersion upgradeVersion : upgradeVersions) {
+			validateSqlFile(upgradeVersion.getBusiness(), upgradeVersion.getDmlCurrentVersion(),
+					upgradeVersion.getDmlTargetVersion(),
+					upgradeVersion.getDmlFilePath(), upgradeVersion.getDmlFilePrefix(), DML);
+		}
+	}
+
+	/**
+	 * 校验sql文件是否存在
+	 * @param business 模块名称
+	 * @param currentVersion 升级前的当前版本号
+	 * @param targetVersion 要升级到的目标版本号
+	 * @param filePath 脚本所在文件路径
+	 * @param filePrefix 脚本文件的前缀
+	 * @param languageType 语言类型
+	 * @throws DatabaseUpgradeException 数据库升级异常
+	 */
 	private void validateSqlFile(String business, int currentVersion, int targetVersion,
 			String filePath, String filePrefix, String languageType) throws DatabaseUpgradeException {
-		// 读取脚本文件获取到的字符缓冲输入流
-		List<String> sqlList;
 		Path scriptFilePath;
 		while (targetVersion > currentVersion) {
 			scriptFilePath = getScriptFilePath(filePath, filePrefix, ++currentVersion);
 			if (!scriptFilePath.toFile().exists()) {
-				throw new DatabaseUpgradeException(languageType + "升级文件在路径" + scriptFilePath.toString() + "下不存在");
+				throw new DatabaseUpgradeException(
+						getSqlFileInfo(business, currentVersion, targetVersion, languageType) + " 升级文件在路径："
+								+ scriptFilePath.toString() + "下不存在");
 			}
 		}
-		updateVersionInfo(business, currentVersion, filePrefix, languageType);
 	}
 }
