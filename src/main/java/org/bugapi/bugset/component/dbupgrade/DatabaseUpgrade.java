@@ -1,11 +1,11 @@
 package org.bugapi.bugset.component.dbupgrade;
 
-import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.DEFAULT_SCRIPT_ROOT_DIRECTORY;
+import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConstants.DEFAULT_SCRIPT_ROOT_DIRECTORY;
 
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.bugapi.bugset.base.constant.EnvironmentEnum;
 import org.bugapi.bugset.base.util.string.StringUtil;
+import org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeModeEnum;
 import org.bugapi.bugset.component.dbupgrade.exception.DatabaseUpgradeException;
 import org.bugapi.bugset.component.dbupgrade.executor.DatabaseUpgradeExecutor;
 import org.bugapi.bugset.component.dbupgrade.parser.DefaultUpgradeConfigParser;
@@ -35,9 +35,20 @@ public class DatabaseUpgrade {
 	 */
 	private String scriptDirectory;
 
+	/**
+	 * 升级模式
+	 */
+	private DatabaseUpgradeModeEnum upgradeMode;
+
 
 	public DatabaseUpgrade(DataSource dataSource) {
+		this(dataSource, DatabaseUpgradeModeEnum.SINGLE);
+	}
+
+	public DatabaseUpgrade(DataSource dataSource,
+			DatabaseUpgradeModeEnum upgradeMode) {
 		this.dataSource = dataSource;
+		this.upgradeMode = upgradeMode;
 	}
 
 	public void setScriptDirectory(String scriptDirectory) {
@@ -48,18 +59,16 @@ public class DatabaseUpgrade {
 		this.parser = parser;
 	}
 
+	public void setUpgradeMode(
+			DatabaseUpgradeModeEnum upgradeMode) {
+		this.upgradeMode = upgradeMode;
+	}
+
 	/**
 	 * 数据脚本升级的入口方法
-	 * @param environment 环境类型{@link EnvironmentEnum}
-	 * @param enableAutoUpgrade 是否自动升级
 	 * @throws DatabaseUpgradeException 数据库升级异常
 	 */
-	public void execute(EnvironmentEnum environment, Boolean enableAutoUpgrade)
-			throws DatabaseUpgradeException {
-		if (!enableAutoUpgrade) {
-			log.info("数据库自动化升级未开启，取消升级...");
-			return;
-		}
+	public void execute() throws DatabaseUpgradeException {
 		if (dataSource == null) {
 			log.info("无法获取数据源，取消升级...");
 			return;
@@ -71,7 +80,8 @@ public class DatabaseUpgrade {
 		if (StringUtil.isBlank(scriptDirectory)) {
 			scriptDirectory = DEFAULT_SCRIPT_ROOT_DIRECTORY;
 		}
-		DatabaseUpgradeExecutor executor = new DatabaseUpgradeExecutor(environment, dataSource, parser, scriptDirectory);
+		DatabaseUpgradeExecutor executor = new DatabaseUpgradeExecutor(dataSource, parser,
+				scriptDirectory, upgradeMode);
 		executor.upgrade();
 		log.info("数据库升级完成...");
 	}

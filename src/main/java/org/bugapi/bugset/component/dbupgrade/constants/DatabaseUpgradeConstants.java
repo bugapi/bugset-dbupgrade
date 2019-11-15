@@ -6,7 +6,7 @@ package org.bugapi.bugset.component.dbupgrade.constants;
  * @author gust
  * @since 0.0.1
  */
-public class DatabaseUpgradeConfigConstants {
+public class DatabaseUpgradeConstants {
 
   /**
    * 数据库升级记录表名

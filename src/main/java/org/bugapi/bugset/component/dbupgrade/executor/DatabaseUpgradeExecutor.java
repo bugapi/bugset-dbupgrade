@@ -1,8 +1,8 @@
 package org.bugapi.bugset.component.dbupgrade.executor;
 
-import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.DDL;
-import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.DML;
-import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConfigConstants.UPGRADE_TABLE_NAME;
+import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConstants.DDL;
+import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConstants.DML;
+import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConstants.UPGRADE_TABLE_NAME;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,11 +17,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.bugapi.bugset.base.constant.EnvironmentEnum;
 import org.bugapi.bugset.base.util.collection.CollectionUtil;
 import org.bugapi.bugset.base.util.sql.DataBaseUtil;
 import org.bugapi.bugset.base.util.sql.MetaDataUtil;
 import org.bugapi.bugset.base.util.string.StringUtil;
+import org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeModeEnum;
 import org.bugapi.bugset.component.dbupgrade.database.DatabaseOperation;
 import org.bugapi.bugset.component.dbupgrade.database.DatabaseOperationFactory;
 import org.bugapi.bugset.component.dbupgrade.domain.DatabaseUpgradeVersion;
@@ -38,11 +38,6 @@ import org.bugapi.bugset.component.dbupgrade.parser.UpgradeConfigParser;
  */
 @Slf4j
 public class DatabaseUpgradeExecutor {
-
-	/**
-	 * 环境
-	 */
-	private EnvironmentEnum environment;
 
 	/**
 	 * 数据源
@@ -64,12 +59,17 @@ public class DatabaseUpgradeExecutor {
 	 */
 	private String scriptDirectory;
 
-	public DatabaseUpgradeExecutor(EnvironmentEnum environment, DataSource dataSource,
-			UpgradeConfigParser upgradeConfigParser, String scriptDirectory) {
-		this.environment = environment;
+	/**
+	 * 升级模式
+	 */
+	private DatabaseUpgradeModeEnum upgradeMode;
+
+	public DatabaseUpgradeExecutor(DataSource dataSource,
+			UpgradeConfigParser upgradeConfigParser, String scriptDirectory, DatabaseUpgradeModeEnum upgradeMode) {
 		this.dataSource = dataSource;
 		this.parser = upgradeConfigParser;
 		this.scriptDirectory = scriptDirectory;
+		this.upgradeMode = upgradeMode;
 	}
 
 	/**
@@ -137,7 +137,6 @@ public class DatabaseUpgradeExecutor {
 			DatabaseVersion databaseVersion = new DatabaseVersion();
 			databaseVersion.setBusiness(config.getBusiness());
 			databaseVersion.setDescription(config.getDescription());
-			databaseVersion.setEnvironment(this.environment.getType());
 			databaseVersion.setDdlVersion(0);
 			databaseVersion.setDmlVersion(0);
 			Date date = new Date();

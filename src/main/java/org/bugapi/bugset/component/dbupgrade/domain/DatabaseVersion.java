@@ -3,7 +3,6 @@ package org.bugapi.bugset.component.dbupgrade.domain;
 import java.io.Serializable;
 import java.util.Date;
 import lombok.Data;
-import org.bugapi.bugset.base.constant.EnvironmentEnum;
 
 /**
  * 数据库升级版本表
@@ -31,11 +30,6 @@ public class DatabaseVersion implements Serializable {
      * 业务描述
      */
     private String description;
-
-    /**
-     * 环境{@link EnvironmentEnum}
-     */
-    private String environment;
 
     /**
      * 数据定义语言升级版本号

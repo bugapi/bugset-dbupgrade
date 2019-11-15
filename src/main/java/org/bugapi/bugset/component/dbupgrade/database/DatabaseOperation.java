@@ -51,6 +51,7 @@ public interface DatabaseOperation {
    * @param updateSql 更新语句
    * @param version 版本号
    * @param business 业务
+   * @throws SQLException SQL执行异常
    */
   default void updateDataVersionTable(DataSource dataSource, String updateSql, int version, String business)
       throws SQLException {
