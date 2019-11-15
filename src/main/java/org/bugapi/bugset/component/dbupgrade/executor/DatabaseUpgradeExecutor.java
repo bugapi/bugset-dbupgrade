@@ -23,7 +23,7 @@ import org.bugapi.bugset.base.util.sql.DataBaseUtil;
 import org.bugapi.bugset.base.util.sql.MetaDataUtil;
 import org.bugapi.bugset.base.util.string.StringUtil;
 import org.bugapi.bugset.component.dbupgrade.database.DatabaseOperation;
-import org.bugapi.bugset.component.dbupgrade.database.MySqlOperationDelegate;
+import org.bugapi.bugset.component.dbupgrade.database.DatabaseOperationFactory;
 import org.bugapi.bugset.component.dbupgrade.domain.DatabaseUpgradeVersion;
 import org.bugapi.bugset.component.dbupgrade.domain.DatabaseVersion;
 import org.bugapi.bugset.component.dbupgrade.domain.UpgradeConfig;
@@ -83,10 +83,14 @@ public class DatabaseUpgradeExecutor {
 			log.error("未查询到任何需要升级的配置信息，升级终止...");
 			return;
 		}
+
+		//升级配置排序
 		upgradeConfigs.sort(Comparator.comparingInt(UpgradeConfig::getSeq));
 
-		//TODO 根据数据库类型使用不同的数据库操作代理
-		databaseOperation = new MySqlOperationDelegate(dataSource);
+		//获取数据库操作对象
+		databaseOperation = DatabaseOperationFactory.getDatabaseOperation(dataSource);
+
+		//判断数据库升级表是否存在，不存在则创建
 		if (MetaDataUtil.existTable(dataSource, UPGRADE_TABLE_NAME)) {
 			compareAndInitVersionTable(upgradeConfigs);
 		} else {
