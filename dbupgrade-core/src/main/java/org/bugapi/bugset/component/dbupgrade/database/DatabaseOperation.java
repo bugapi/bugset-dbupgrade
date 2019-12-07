@@ -60,7 +60,8 @@ public interface DatabaseOperation {
    * @param business 业务
    * @throws SQLException SQL执行异常
    */
-  default void updateDataVersionTable(DataSource dataSource, String updateSql, int version, String business)
+  default void updateDataVersionTable(DataSource dataSource, String updateSql, int version,
+      String business)
       throws SQLException {
     DataBaseUtil
         .update(dataSource, updateSql, new java.sql.Date(System.currentTimeMillis()), version, business);
@@ -85,7 +86,7 @@ public interface DatabaseOperation {
    * @return 返回数据库锁
    * @throws SQLException SQL执行异常
    */
-  default int selectDatabaseUpgradeLock (
+  default int selectDatabaseUpgradeLock(
       DataSource dataSource, String sql) throws SQLException {
     return DataBaseUtil.selectNumber(dataSource, sql);
   }

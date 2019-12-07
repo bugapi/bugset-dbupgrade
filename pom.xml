@@ -6,7 +6,7 @@
 
   <groupId>org.bugapi.bugset.component</groupId>
   <artifactId>bugset-dbupgrade</artifactId>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
   <version>0.0.1-SNAPSHOT</version>
 
   <developers>
@@ -27,6 +27,9 @@
       </roles>
     </developer>
   </developers>
+  <modules>
+    <module>dbupgrade-core</module>
+  </modules>
 
   <!-- 属性配置 -->
   <properties>

@@ -42,7 +42,7 @@ public class DatabaseUpgrade {
 	private DatabaseUpgradeModeEnum upgradeMode;
 
 	/**
-	 * 全局schema
+   * 全局schema
 	 */
 	private String globalSchema;
 
