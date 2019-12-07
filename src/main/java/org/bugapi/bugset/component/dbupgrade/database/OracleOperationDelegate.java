@@ -68,6 +68,17 @@ public class OracleOperationDelegate implements DatabaseOperation {
   }
 
   /**
+   * 获取数据库升级锁
+   *
+   * @return 数据库升级锁
+   * @throws SQLException SQL执行异常
+   */
+  @Override
+  public int getDatabaseUpgradeLock() throws SQLException {
+    return 0;
+  }
+
+  /**
    * 返回数据库中已经存在的所有升级配置
    *
    * @return 数据库升级配置

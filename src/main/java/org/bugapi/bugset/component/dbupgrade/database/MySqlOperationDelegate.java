@@ -79,4 +79,14 @@ public class MySqlOperationDelegate implements DatabaseOperation {
   public List<DatabaseVersion> listDatabaseVersions() {
     return selectDatabaseVersions(dataSource, "select * from DATABASE_VERSION");
   }
+
+  /**
+   * 获取数据库升级锁
+   * @return 数据库升级锁
+   * @throws SQLException SQL执行异常
+   */
+  @Override
+  public int getDatabaseUpgradeLock() throws SQLException {
+    return selectDatabaseUpgradeLock(dataSource, "select 1 from DATABASE_LOCK");
+  }
 }

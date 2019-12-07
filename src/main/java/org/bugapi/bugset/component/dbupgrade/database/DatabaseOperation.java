@@ -46,6 +46,13 @@ public interface DatabaseOperation {
       throws SQLException;
 
   /**
+   * 获取数据库升级锁
+   * @return 数据库升级锁
+   * @throws SQLException SQL执行异常
+   */
+  int getDatabaseUpgradeLock() throws SQLException;
+
+  /**
    * 更新数据库升级表
    * @param dataSource 数据源
    * @param updateSql 更新语句
@@ -73,5 +80,16 @@ public interface DatabaseOperation {
     } catch (SQLException e) {
       throw new RuntimeException("从数据库查询版本信息失败");
     }
+  }
+
+  /**
+   * 从数据库获取数据库升级锁
+   * @param dataSource 数据库的数据源
+   * @param sql 查询语句
+   * @return 返回数据库锁
+   */
+  default int selectDatabaseUpgradeLock (
+      DataSource dataSource, String sql) throws SQLException {
+    return DataBaseUtil.selectForUpdate(dataSource, sql, null);
   }
 }
