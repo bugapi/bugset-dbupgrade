@@ -16,6 +16,11 @@ public class DatabaseUpgradeVersion {
      */
     private String business;
 
+    /**
+     * 对应mysql的数据库和schema
+     */
+    private String schema;
+
     /** ddl当前版本号【本次升级前的版本号】 */
     private int ddlCurrentVersion;
 

@@ -1,5 +1,6 @@
 package org.bugapi.bugset.component.dbupgrade;
 
+import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConstants.DEFAULT_SCHEMA;
 import static org.bugapi.bugset.component.dbupgrade.constants.DatabaseUpgradeConstants.DEFAULT_SCRIPT_ROOT_DIRECTORY;
 
 import javax.sql.DataSource;
@@ -40,6 +41,11 @@ public class DatabaseUpgrade {
 	 */
 	private DatabaseUpgradeModeEnum upgradeMode;
 
+	/**
+	 * 全局schema
+	 */
+	private String globalSchema;
+
 
 	public DatabaseUpgrade(DataSource dataSource) {
 		this(dataSource, DatabaseUpgradeModeEnum.SINGLE);
@@ -64,6 +70,10 @@ public class DatabaseUpgrade {
 		this.upgradeMode = upgradeMode;
 	}
 
+	public void setGlobalSchema(String globalSchema) {
+		this.globalSchema = globalSchema;
+	}
+
 	/**
 	 * 数据脚本升级的入口方法
 	 * @throws DatabaseUpgradeException 数据库升级异常
@@ -80,8 +90,11 @@ public class DatabaseUpgrade {
 		if (StringUtil.isBlank(scriptDirectory)) {
 			scriptDirectory = DEFAULT_SCRIPT_ROOT_DIRECTORY;
 		}
+		if (StringUtil.isBlank(globalSchema)) {
+			globalSchema = DEFAULT_SCHEMA;
+		}
 		DatabaseUpgradeExecutor executor = new DatabaseUpgradeExecutor(dataSource, parser,
-				scriptDirectory, upgradeMode);
+				scriptDirectory, upgradeMode, globalSchema);
 		executor.upgrade();
 		log.info("数据库升级完成...");
 	}

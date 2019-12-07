@@ -20,7 +20,7 @@ public final class DatabaseOperationFactory {
    * @return 数据操作对象
    * @throws DatabaseUpgradeException 数据库升级异常
    */
-  public static DatabaseOperation getDatabaseOperation(DataSource dataSource)
+  public static DatabaseOperation getDatabaseOperation(DataSource dataSource, String schema)
       throws DatabaseUpgradeException {
     DatabaseEnum databaseType;
     try {
@@ -30,7 +30,7 @@ public final class DatabaseOperationFactory {
     }
     switch (databaseType) {
       case MYSQL:
-        return new MySqlOperationDelegate(dataSource);
+        return new MySqlOperationDelegate(dataSource, schema);
       case ORACLE:
         return new OracleOperationDelegate(dataSource);
       case UNKNOWN:

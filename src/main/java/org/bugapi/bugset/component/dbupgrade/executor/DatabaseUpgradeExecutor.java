@@ -60,16 +60,23 @@ public class DatabaseUpgradeExecutor {
 	private String scriptDirectory;
 
 	/**
+	 * 全局schema
+	 */
+	private String globalSchema;
+
+	/**
 	 * 升级模式
 	 */
 	private DatabaseUpgradeModeEnum upgradeMode;
 
 	public DatabaseUpgradeExecutor(DataSource dataSource,
-			UpgradeConfigParser upgradeConfigParser, String scriptDirectory, DatabaseUpgradeModeEnum upgradeMode) {
+			UpgradeConfigParser upgradeConfigParser, String scriptDirectory, DatabaseUpgradeModeEnum upgradeMode,
+			String globalSchema) {
 		this.dataSource = dataSource;
 		this.parser = upgradeConfigParser;
 		this.scriptDirectory = scriptDirectory;
 		this.upgradeMode = upgradeMode;
+		this.globalSchema = globalSchema;
 	}
 
 	/**
@@ -88,7 +95,7 @@ public class DatabaseUpgradeExecutor {
 		upgradeConfigs.sort(Comparator.comparingInt(UpgradeConfig::getSeq));
 
 		//获取数据库操作对象
-		databaseOperation = DatabaseOperationFactory.getDatabaseOperation(dataSource);
+		databaseOperation = DatabaseOperationFactory.getDatabaseOperation(dataSource, globalSchema);
 
 		//判断数据库升级表是否存在，不存在则创建
 		if (MetaDataUtil.existTable(dataSource, UPGRADE_TABLE_NAME)) {
@@ -159,16 +166,17 @@ public class DatabaseUpgradeExecutor {
 	 */
 	private void compareAndInitVersionTable(List<UpgradeConfig> upgradeConfigs)
 			throws DatabaseUpgradeException {
-		List<DatabaseVersion> databaseVersions = this.databaseOperation.listDatabaseVersions();
+		List<DatabaseVersion> databaseVersions;
+		try {
+			databaseVersions = this.databaseOperation.listDatabaseVersions();
+		} catch (SQLException e) {
+			throw new DatabaseUpgradeException("查询最近升级数据库升级表失败", e);
+		}
 		Set<String> existBusinesses = databaseVersions.stream().map(DatabaseVersion::getBusiness)
 				.collect(Collectors.toSet());
 		List<UpgradeConfig> initConfigs = upgradeConfigs.stream().filter(upgradeConfig -> !existBusinesses
 				.contains(upgradeConfig.getBusiness())).collect(Collectors.toList());
-		try {
-			initDatabaseVersionConfigs(initConfigs);
-		} catch (DatabaseUpgradeException e) {
-			throw new DatabaseUpgradeException("数据库升级表配置初始化失败", e);
-		}
+		initDatabaseVersionConfigs(initConfigs);
 	}
 
 	/**
@@ -176,8 +184,14 @@ public class DatabaseUpgradeExecutor {
 	 * @param newVersions 升级配置集合
 	 * @return List<VersionInfo> 版本管理的集合
 	 */
-	private List<DatabaseUpgradeVersion> createUpgradeVersions(List<UpgradeConfig> newVersions){
-		List<DatabaseVersion> oldVersions = this.databaseOperation.listDatabaseVersions();
+	private List<DatabaseUpgradeVersion> createUpgradeVersions(List<UpgradeConfig> newVersions)
+			throws DatabaseUpgradeException {
+		List<DatabaseVersion> oldVersions;
+		try {
+			oldVersions = this.databaseOperation.listDatabaseVersions();
+		} catch (SQLException e) {
+			throw new DatabaseUpgradeException("查询最近升级数据库升级表失败", e);
+		}
 		Map<String, List<DatabaseVersion>> oldVersionsMap = oldVersions.stream()
 				.collect(Collectors.groupingBy(DatabaseVersion::getBusiness));
 		return newVersions.stream().map(newVersion -> {

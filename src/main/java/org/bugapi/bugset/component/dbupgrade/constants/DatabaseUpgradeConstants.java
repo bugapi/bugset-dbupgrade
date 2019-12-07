@@ -28,6 +28,11 @@ public class DatabaseUpgradeConstants {
    */
   public static final String DEFAULT_SCRIPT_ROOT_DIRECTORY = "upgrade";
 
+  /**
+   * 默认全局schema
+   */
+  public static final String DEFAULT_SCHEMA = "";
+
 
   /** domain必须与数据库中UPGRADE_VERSION相对应 */
   public static final String DOMAIN = "domain";
