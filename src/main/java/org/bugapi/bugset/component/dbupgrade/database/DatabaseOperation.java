@@ -3,7 +3,6 @@ package org.bugapi.bugset.component.dbupgrade.database;
 import java.sql.SQLException;
 import java.util.List;
 import javax.sql.DataSource;
-import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.handlers.BeanListHandler;
 import org.bugapi.bugset.base.util.sql.DataBaseUtil;
 import org.bugapi.bugset.component.dbupgrade.domain.DatabaseVersion;
@@ -25,8 +24,9 @@ public interface DatabaseOperation {
   /**
    * 返回数据库中已经存在的所有升级配置
    * @return 数据库升级配置
+   * @throws SQLException SQL执行异常
    */
-  List<DatabaseVersion> listDatabaseVersions();
+  List<DatabaseVersion> listDatabaseVersions() throws SQLException;
 
   /**
    * 初始化配置
@@ -71,15 +71,11 @@ public interface DatabaseOperation {
    * @param dataSource 数据库的数据源
    * @param sql 查询语句
    * @return VersionInfo 版本信息
+   * @throws SQLException SQL执行异常
    */
   default List<DatabaseVersion> selectDatabaseVersions(
-      DataSource dataSource, String sql){
-    QueryRunner queryRunner = new QueryRunner(dataSource);
-    try {
-      return queryRunner.query(sql, new BeanListHandler<>(DatabaseVersion.class));
-    } catch (SQLException e) {
-      throw new RuntimeException("从数据库查询版本信息失败");
-    }
+      DataSource dataSource, String sql) throws SQLException {
+    return DataBaseUtil.select(dataSource, sql, new BeanListHandler<>(DatabaseVersion.class));
   }
 
   /**
@@ -87,9 +83,10 @@ public interface DatabaseOperation {
    * @param dataSource 数据库的数据源
    * @param sql 查询语句
    * @return 返回数据库锁
+   * @throws SQLException SQL执行异常
    */
   default int selectDatabaseUpgradeLock (
       DataSource dataSource, String sql) throws SQLException {
-    return DataBaseUtil.selectForUpdate(dataSource, sql, null);
+    return DataBaseUtil.selectNumber(dataSource, sql);
   }
 }

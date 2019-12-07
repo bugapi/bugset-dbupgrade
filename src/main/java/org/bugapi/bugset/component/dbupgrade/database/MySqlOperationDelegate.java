@@ -74,9 +74,10 @@ public class MySqlOperationDelegate implements DatabaseOperation {
    * 返回数据库中已经存在的所有升级配置
    *
    * @return 数据库升级配置
+   * @throws SQLException SQL执行异常
    */
   @Override
-  public List<DatabaseVersion> listDatabaseVersions() {
+  public List<DatabaseVersion> listDatabaseVersions() throws SQLException {
     return selectDatabaseVersions(dataSource, "select * from DATABASE_VERSION");
   }
 
