@@ -16,6 +16,15 @@ public enum DatabaseUpgradeModeEnum {
   /**
    * 集群
    */
-  CLUSTER
+  CLUSTER;
+
+  public static DatabaseUpgradeModeEnum getUpgradeMode(String mode) {
+    for (DatabaseUpgradeModeEnum e : DatabaseUpgradeModeEnum.values()) {
+      if (e.name().equals(mode)) {
+        return e;
+      }
+    }
+    return null;
+  }
 
 }

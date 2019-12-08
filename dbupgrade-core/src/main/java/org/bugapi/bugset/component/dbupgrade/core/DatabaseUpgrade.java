@@ -93,6 +93,9 @@ public class DatabaseUpgrade {
 		if (StringUtil.isBlank(globalSchema)) {
 			globalSchema = DEFAULT_SCHEMA;
 		}
+		if (upgradeMode == null) {
+			upgradeMode = DatabaseUpgradeModeEnum.SINGLE;
+		}
 		DatabaseUpgradeExecutor executor = new DatabaseUpgradeExecutor(dataSource, parser,
 				scriptDirectory, upgradeMode, globalSchema);
 		executor.upgrade();

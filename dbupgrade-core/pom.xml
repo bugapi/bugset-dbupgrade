@@ -20,7 +20,6 @@
 
     <bugset.base.version>0.0.1-SNAPSHOT</bugset.base.version>
     <slf4j.version>1.7.25</slf4j.version>
-    <lombok.version>1.16.0</lombok.version>
   </properties>
 
   <dependencies>
@@ -43,11 +42,5 @@
       <version>${slf4j.version}</version>
     </dependency>
 
-    <!-- lombok插件支持 -->
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>${lombok.version}</version>
-    </dependency>
   </dependencies>
 </project>
