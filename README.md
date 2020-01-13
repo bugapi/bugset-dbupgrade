@@ -1,9 +1,11 @@
 # bugset-dbupgrade
 
 #### 项目介绍
-- bugset-dbupgrade是一款数据库升级组件
+- bugset-dbupgrade是一款关系型数据库升级组件
 - 支持MySQL、Oracle数据库
+- 支持DML和DDL的升级
 - 支持单节点单数据库，多节点单数据库的升级
+- 支持升级版本的记录和回溯
 
 #### 软件架构
 ```
