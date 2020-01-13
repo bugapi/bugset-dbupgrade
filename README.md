@@ -8,11 +8,12 @@
 #### 软件架构
 ```
 bugset-dbupgrade
+|
 ├─dbupgrade-core 数据库升级核心功能
 │
 ├─dbupgrade-spring spring整合组件
 │ 
-├─dbupgrade-spring-boot-starter 配置信息
+├─dbupgrade-spring-boot-starter springboot自动配置类
 
 ```
 
