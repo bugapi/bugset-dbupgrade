@@ -6,8 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.bugapi.bugset.component.dbupgrade.core.DatabaseUpgrade;
 import org.bugapi.bugset.component.dbupgrade.core.constants.DatabaseUpgradeModeEnum;
 import org.bugapi.bugset.component.dbupgrade.core.parser.UpgradeConfigParser;
+import org.bugapi.bugset.component.dbupgrade.spring.boot.autoconfigure.listener.DatabaseUpgradeListener;
 import org.bugapi.bugset.component.dbupgrade.spring.parser.SpringUpgradeConfigParser;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -24,7 +24,7 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(DatabaseUpgradeProperties.class)
 @AutoConfigureAfter({ DataSourceAutoConfiguration.class })
 @Slf4j
-public class DatabaseUpgradeAutoConfiguration implements InitializingBean {
+public class DatabaseUpgradeAutoConfiguration {
 
   @Resource
   private DatabaseUpgradeProperties properties;
@@ -46,12 +46,9 @@ public class DatabaseUpgradeAutoConfiguration implements InitializingBean {
     return databaseUpgrade;
   }
 
-  @Override
-  public void afterPropertiesSet() throws Exception {
-    if (properties.isEnable()) {
-      databaseUpgrade.execute();
-    } else {
-      log.info("数据库升级未开启，升级取消");
-    }
+  @Bean
+  public DatabaseUpgradeListener getDatabaseUpgradeListener(DatabaseUpgrade databaseUpgrade) {
+    return new DatabaseUpgradeListener(properties, databaseUpgrade);
   }
+
 }
