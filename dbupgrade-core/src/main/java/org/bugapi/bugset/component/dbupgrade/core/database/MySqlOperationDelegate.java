@@ -1,5 +1,7 @@
 package org.bugapi.bugset.component.dbupgrade.core.database;
 
+import static org.bugapi.bugset.component.dbupgrade.core.constants.DatabaseUpgradeConstants.UPGRADE_TABLE_NAME;
+
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,7 +38,7 @@ public class MySqlOperationDelegate implements DatabaseOperation {
    */
   @Override
   public void initDatabaseVersionTable() throws SQLException {
-    DataBaseUtil.update(dataSource, String.format("CREATE TABLE %sDATABASE_VERSION ("
+    DataBaseUtil.update(dataSource, String.format("CREATE TABLE %s" + UPGRADE_TABLE_NAME + " ("
         + "id bigint(10) unsigned auto_increment primary key comment 'id',"
         + "business varchar(100) not null comment '业务名称',"
         + "description varchar(1000) comment '业务描述',"
@@ -55,7 +57,7 @@ public class MySqlOperationDelegate implements DatabaseOperation {
   @Override
   public void initDatabaseVersionConfigs(List<DatabaseVersion> initConfigs) throws SQLException {
     List<String> initSQLs = initConfigs.stream().map(initConfig -> String.format(
-        "insert into %sDATABASE_VERSION(business, description, ddl_version, dml_version) values (%s, %s, %d, %d)",
+        "insert into %s" + UPGRADE_TABLE_NAME + "(business, description, ddl_version, dml_version) values ('%s', '%s', %d, %d)",
         getDatabaseSchema(), initConfig.getBusiness(), initConfig.getDescription(), 0, 0))
         .collect(Collectors.toList());
     DataBaseUtil.batchExecuteSqlWithTransaction(initSQLs, dataSource);
@@ -72,7 +74,7 @@ public class MySqlOperationDelegate implements DatabaseOperation {
   public void updateVersionByBusiness(String business, String languageType, int version)
       throws SQLException {
     updateDataVersionTable(dataSource, String.format(
-        "update %sDATABASE_VERSION set " + languageType + "_upgrade_date = ?, " + languageType
+        "update %s" + UPGRADE_TABLE_NAME + " set " + languageType + "_upgrade_date = ?, " + languageType
             + "_version = ? where business = ?", getDatabaseSchema()), version, business);
   }
 
@@ -85,7 +87,7 @@ public class MySqlOperationDelegate implements DatabaseOperation {
   @Override
   public List<DatabaseVersion> listDatabaseVersions() throws SQLException {
     return selectDatabaseVersions(dataSource, String.format(
-        "select * from %sDATABASE_VERSION", getDatabaseSchema()));
+        "select * from %s" + UPGRADE_TABLE_NAME, getDatabaseSchema()));
   }
 
   /**

@@ -13,9 +13,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author gust
  * @since 0.0.1
  */
-@ConfigurationProperties(prefix = "db.upgrade")
+@ConfigurationProperties(prefix = "bugapi.db.upgrade")
 @Data
 public class DatabaseUpgradeProperties {
+
+  /**
+   * 是否开启数据库升级
+   */
+  private boolean enable = true;
 
   /**
    * 脚本文件目录
@@ -31,10 +36,5 @@ public class DatabaseUpgradeProperties {
    * 数据库schema
    */
   private String schema = DEFAULT_SCHEMA;
-
-  /**
-   * 是否开启数据库升级
-   */
-  private boolean enable = true;
 
 }

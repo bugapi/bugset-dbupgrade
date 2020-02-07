@@ -115,9 +115,9 @@ public class DatabaseUpgradeExecutor {
 
 		UpgradeStrategy upgradeStrategy;
 		if (DatabaseUpgradeModeEnum.SINGLE == upgradeMode) {
-			upgradeStrategy = new SingleUpgradeStrategy(dataSource, databaseOperation);
+			upgradeStrategy = new SingleUpgradeStrategy(dataSource, databaseOperation, parser);
 		} else {
-			upgradeStrategy = new ClusterUpgradeStrategy(dataSource, databaseOperation);
+			upgradeStrategy = new ClusterUpgradeStrategy(dataSource, databaseOperation, parser);
 		}
 		upgradeStrategy.doUpgrade(upgradeVersions);
 	}
@@ -271,12 +271,12 @@ public class DatabaseUpgradeExecutor {
 			String filePath, String filePrefix, String languageType) throws DatabaseUpgradeException {
 		Path scriptFilePath;
 		while (targetVersion > currentVersion) {
-			scriptFilePath = DatabaseUpgradeUtil
-					.getScriptFilePath(filePath, filePrefix, ++currentVersion);
+			scriptFilePath = parser
+					.getScriptFilePath(filePath, filePrefix, languageType, ++currentVersion);
 			if (!scriptFilePath.toFile().exists()) {
 				throw new DatabaseUpgradeException(
 						DatabaseUpgradeUtil
-								.getSqlFileInfo(business, currentVersion, targetVersion, languageType) + " 升级文件在路径："
+								.getSqlFileInfo(business, currentVersion - 1, targetVersion, languageType) + " 升级文件在路径："
 								+ scriptFilePath.toString() + "下不存在");
 			}
 		}

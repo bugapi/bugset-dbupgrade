@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.bugapi.bugset.component.dbupgrade.core.database.DatabaseOperation;
 import org.bugapi.bugset.component.dbupgrade.core.domain.DatabaseUpgradeVersion;
 import org.bugapi.bugset.component.dbupgrade.core.exception.DatabaseUpgradeException;
+import org.bugapi.bugset.component.dbupgrade.core.parser.UpgradeConfigParser;
 
 /**
  * 多节点数据库升级策略
@@ -20,8 +21,8 @@ public class ClusterUpgradeStrategy extends AbstractUpgradeStrategy {
 
 
   public ClusterUpgradeStrategy(DataSource dataSource,
-      DatabaseOperation databaseOperation) {
-    super(dataSource, databaseOperation);
+      DatabaseOperation databaseOperation, UpgradeConfigParser parser) {
+    super(dataSource, databaseOperation, parser);
   }
 
   @Override

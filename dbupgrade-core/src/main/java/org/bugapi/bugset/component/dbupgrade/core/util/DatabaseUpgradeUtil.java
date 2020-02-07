@@ -35,14 +35,14 @@ public class DatabaseUpgradeUtil {
    * @param targetVersion 要执行的脚本的版本号
    * @return String 完整的脚本文件路径
    */
-  public static Path getScriptFilePath(String filePath, String filePrefix, int targetVersion){
+  public static Path getScriptFilePath(String filePath, String filePrefix, String languageType, int targetVersion){
     // 替换路径分隔符为统一的"/", trim头尾空格, 如果路径不以"/"结尾, 则追加"/"
     filePath = filePath.trim().replace("/", File.separator);
     if (!filePath.endsWith(File.separator)) {
       filePath += File.separator;
     }
     // 拼接完整的路径
-    Path scriptFilePath = Paths.get(filePath, filePrefix + "_" + targetVersion + ".sql");
+    Path scriptFilePath = Paths.get(filePath, filePrefix + "_" + languageType + "_" + targetVersion + ".sql");
     log.info("尝试从如下路径查找升级脚本:" + scriptFilePath.toString());
     return scriptFilePath;
   }

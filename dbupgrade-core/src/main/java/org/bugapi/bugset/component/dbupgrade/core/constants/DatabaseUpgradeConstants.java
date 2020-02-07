@@ -11,17 +11,17 @@ public class DatabaseUpgradeConstants {
   /**
    * 数据库升级记录表名
    */
-  public static final String UPGRADE_TABLE_NAME = "DATABASEVERSION";
+  public static final String UPGRADE_TABLE_NAME = "DATABASE_VERSION";
 
   /**
    * 语言类型-ddl
    */
-  public static final String DML = "ddl";
+  public static final String DML = "dml";
 
   /**
    * 语言类型-dml
    */
-  public static final String DDL = "dml";
+  public static final String DDL = "ddl";
 
   /**
    * 默认脚本根目录

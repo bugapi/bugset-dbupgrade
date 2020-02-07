@@ -15,7 +15,7 @@
     <dependency>
       <groupId>org.bugapi.bugset.component</groupId>
       <artifactId>dbupgrade-core</artifactId>
-      <version>${version}</version>
+      <version>${project.version}</version>
     </dependency>
 
     <dependency>

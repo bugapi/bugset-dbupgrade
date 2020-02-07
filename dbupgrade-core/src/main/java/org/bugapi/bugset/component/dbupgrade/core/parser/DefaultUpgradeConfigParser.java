@@ -63,4 +63,17 @@ public class DefaultUpgradeConfigParser implements UpgradeConfigParser {
 		return upgradeConfigs;
 	}
 
+	/**
+	 * 获取升级脚本的路径
+	 * @param filePath 解析到的文件路径
+	 * @param filePrefix 解析到文件名前缀
+	 * @param languageType 语言类型
+	 * @param targetVersion 要执行的脚本的版本号
+	 * @return String 完整的脚本文件路径
+	 */
+	@Override
+	public Path getScriptFilePath(String filePath, String filePrefix, String languageType,
+			int targetVersion) {
+		return null;
+	}
 }

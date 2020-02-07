@@ -3,10 +3,7 @@ package org.bugapi.bugset.component.dbupgrade.core.strategy;
 import static org.bugapi.bugset.component.dbupgrade.core.constants.DatabaseUpgradeConstants.DDL;
 import static org.bugapi.bugset.component.dbupgrade.core.constants.DatabaseUpgradeConstants.DML;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.List;
 import javax.sql.DataSource;
@@ -16,6 +13,8 @@ import org.bugapi.bugset.base.util.sql.DataBaseUtil;
 import org.bugapi.bugset.component.dbupgrade.core.database.DatabaseOperation;
 import org.bugapi.bugset.component.dbupgrade.core.domain.DatabaseUpgradeVersion;
 import org.bugapi.bugset.component.dbupgrade.core.exception.DatabaseUpgradeException;
+import org.bugapi.bugset.component.dbupgrade.core.parser.UpgradeConfigParser;
+import org.bugapi.bugset.component.dbupgrade.core.util.DatabaseUpgradeUtil;
 
 /**
  * 抽象数据库升级策略
@@ -36,6 +35,8 @@ public abstract class AbstractUpgradeStrategy implements UpgradeStrategy {
    * 数据库操作
    */
   protected DatabaseOperation databaseOperation;
+
+  protected UpgradeConfigParser parser;
 
   /**
    * 执行数据库定义语言的升级脚本
@@ -83,7 +84,7 @@ public abstract class AbstractUpgradeStrategy implements UpgradeStrategy {
     List<String> sqlList;
     while (targetVersion > currentVersion) {
       try {
-        sqlList = DataBaseUtil.readSql(getScriptFilePath(filePath, filePrefix, ++currentVersion));
+        sqlList = DataBaseUtil.readSql(parser.getScriptFilePath(filePath, filePrefix, languageType, ++currentVersion));
         if (DDL.equals(languageType)) {
           DataBaseUtil.batchExecuteSqlWithTransaction(sqlList, dataSource);
         } else {
@@ -91,29 +92,10 @@ public abstract class AbstractUpgradeStrategy implements UpgradeStrategy {
         }
       } catch (IOException | SQLException e) {
         throw new DatabaseUpgradeException(
-            getSqlFileInfo(business, currentVersion, targetVersion, languageType) + "升级失败", e);
+            DatabaseUpgradeUtil.getSqlFileInfo(business, currentVersion, targetVersion, languageType) + "升级失败", e);
       }
     }
     updateVersionInfo(business, currentVersion, languageType);
-  }
-
-  /**
-   * 获取升级脚本的路径
-   * @param filePath 解析到的文件路径
-   * @param filePrefix 解析到文件名前缀
-   * @param targetVersion 要执行的脚本的版本号
-   * @return String 完整的脚本文件路径
-   */
-  private Path getScriptFilePath(String filePath, String filePrefix, int targetVersion){
-    // 替换路径分隔符为统一的"/", trim头尾空格, 如果路径不以"/"结尾, 则追加"/"
-    filePath = filePath.trim().replace("/", File.separator);
-    if (!filePath.endsWith(File.separator)) {
-      filePath += File.separator;
-    }
-    // 拼接完整的路径
-    Path scriptFilePath = Paths.get(filePath, filePrefix + "_" + targetVersion + ".sql");
-    log.info("尝试从如下路径查找升级脚本:" + scriptFilePath.toString());
-    return scriptFilePath;
   }
 
   /**
@@ -129,20 +111,8 @@ public abstract class AbstractUpgradeStrategy implements UpgradeStrategy {
     } catch (SQLException e) {
       throw new DatabaseUpgradeException("更新版本号失败", e);
     }
-    log.info(getSqlFileInfo(business, currentVersion - 1, currentVersion, languageType) + "成功");
+    log.info(DatabaseUpgradeUtil
+        .getSqlFileInfo(business, currentVersion - 1, currentVersion, languageType) + "成功");
   }
 
-  /**
-   * 信息提示
-   * @param business 模块名称
-   * @param currentVersion 当前版本号
-   * @param targetVersion 目标版本号
-   * @param languageType 语言类型
-   * @return 信息提示
-   */
-  private String getSqlFileInfo(String business, int currentVersion, int targetVersion,
-      String languageType) {
-    return String.format("业务类型：%s 语言类型：%s 版本：%d -> %d ", business, languageType, currentVersion,
-        targetVersion);
-  }
 }

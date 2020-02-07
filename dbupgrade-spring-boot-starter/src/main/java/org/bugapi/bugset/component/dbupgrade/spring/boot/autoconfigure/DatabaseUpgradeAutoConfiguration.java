@@ -29,8 +29,6 @@ public class DatabaseUpgradeAutoConfiguration {
   @Resource
   private DatabaseUpgradeProperties properties;
 
-  private DatabaseUpgrade databaseUpgrade;
-
   @Bean
   public UpgradeConfigParser getSpringUpgradeConfigParser() {
     return new SpringUpgradeConfigParser();
@@ -38,7 +36,7 @@ public class DatabaseUpgradeAutoConfiguration {
 
   @Bean
   public DatabaseUpgrade getDatabaseUpgrade(DataSource dataSource, UpgradeConfigParser upgradeConfigParser) {
-    databaseUpgrade = new DatabaseUpgrade(dataSource,
+    DatabaseUpgrade databaseUpgrade = new DatabaseUpgrade(dataSource,
         DatabaseUpgradeModeEnum.getUpgradeMode(properties.getMode()));
     databaseUpgrade.setParser(upgradeConfigParser);
     databaseUpgrade.setGlobalSchema(properties.getSchema());
